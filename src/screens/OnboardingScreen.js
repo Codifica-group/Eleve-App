@@ -7,21 +7,17 @@ import {
   StyleSheet,
   Animated,
 } from "react-native";
+import SafeScreen from "../components/common/SafeScreen";
+import { ONBOARDING_IMAGES } from "../constants/data";
+import { COLORS, FONTS } from "../constants/theme";
 
-const TOTAL = 6;
+const TOTAL = ONBOARDING_IMAGES.length;
 
-const topImages = [
-  require("../../assets/carrossel_apresentacao_1.png"),
-  require("../../assets/carrossel_apresentacao_2.png"),
-  require("../../assets/carrossel_apresentacao_3.png"),
-  require("../../assets/carrossel_apresentacao_4.png"),
-  require("../../assets/carrossel_apresentacao_5.png"),
-  require("../../assets/carrossel_apresentacao_6.png"),
-];
-
-export default function OnboardingScreen({ onFinish }) {
+export default function OnboardingScreen({ navigation }) {
   const [index, setIndex] = useState(0);
   const progressAnim = useRef(new Animated.Value(0)).current;
+
+  const goToRegister = () => navigation.replace("Register");
 
   useEffect(() => {
     Animated.timing(progressAnim, {
@@ -33,9 +29,9 @@ export default function OnboardingScreen({ onFinish }) {
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setIndex(prev => {
+      setIndex((prev) => {
         if (prev < TOTAL - 1) return prev + 1;
-        onFinish();
+        goToRegister();
         return prev;
       });
     }, 7000);
@@ -44,38 +40,42 @@ export default function OnboardingScreen({ onFinish }) {
 
   function goNext() {
     if (index < TOTAL - 1) {
-      setIndex(prev => prev + 1);
+      setIndex((prev) => prev + 1);
     } else {
-      onFinish();
+      goToRegister();
     }
   }
 
   function goBack() {
-    if (index > 0) setIndex(prev => prev - 1);
+    if (index > 0) setIndex((prev) => prev - 1);
   }
 
   const getNextIconSource = () => {
-    if (index === 2) return require("../../assets/passar_carrossel_amarelo.png");
-    if (index === 4) return require("../../assets/passar_carrossel_laranja.png");
+    if (index === 2)
+      return require("../../assets/passar_carrossel_amarelo.png");
+    if (index === 4)
+      return require("../../assets/passar_carrossel_laranja.png");
     return require("../../assets/passar_carrossel_azul.png");
   };
 
   const getPrevIconSource = () => {
-    if (index === 3) return require("../../assets/passar_carrossel_amarelo.png");
-    if (index === 5) return require("../../assets/passar_carrossel_laranja.png");
+    if (index === 3)
+      return require("../../assets/passar_carrossel_amarelo.png");
+    if (index === 5)
+      return require("../../assets/passar_carrossel_laranja.png");
     return require("../../assets/passar_carrossel_azul.png");
   };
 
   return (
-    <View style={styles.container}>
+    <SafeScreen
+      backgroundColor={COLORS.backgroundLight}
+      statusBarStyle="dark"
+      style={styles.container}
+    >
       {/* ÁREA DA IMAGEM */}
       <View style={styles.imageWrapper}>
-        <Image
-          source={topImages[index]}
-          style={styles.topImage}
-        />
+        <Image source={ONBOARDING_IMAGES[index]} style={styles.topImage} />
 
-        {/* SETA voltar */}
         {index > 0 && (
           <TouchableOpacity style={styles.prevButton} onPress={goBack}>
             <Image
@@ -85,12 +85,10 @@ export default function OnboardingScreen({ onFinish }) {
           </TouchableOpacity>
         )}
 
-        {/* SETA avançar */}
         <TouchableOpacity style={styles.nextButton} onPress={goNext}>
           <Image source={getNextIconSource()} style={styles.arrowIcon} />
         </TouchableOpacity>
 
-        {/* BARRA de progresso contínua */}
         <View style={styles.progressContainer}>
           <View style={styles.progressTrack}>
             <Animated.View
@@ -108,20 +106,19 @@ export default function OnboardingScreen({ onFinish }) {
         </View>
       </View>
 
-      {/* ÁREA INFERIOR BRANCA com botão */}
+      {/* ÁREA INFERIOR */}
       <View style={styles.bottomArea}>
-        <TouchableOpacity style={styles.startButton} onPress={onFinish}>
+        <TouchableOpacity style={styles.startButton} onPress={goToRegister}>
           <Text style={styles.startText}>Começar</Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </SafeScreen>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FDFDF1",
   },
   imageWrapper: {
     flex: 1,
@@ -174,17 +171,17 @@ const styles = StyleSheet.create({
   bottomArea: {
     paddingVertical: 30,
     alignItems: "center",
-    backgroundColor: "#FDFDF1",
+    backgroundColor: COLORS.backgroundLight,
   },
   startButton: {
-    backgroundColor: "#6FB4C7",
+    backgroundColor: COLORS.primary,
     paddingHorizontal: 60,
     paddingVertical: 14,
     borderRadius: 20,
   },
   startText: {
-    fontFamily: "QuicksandBold",
+    fontFamily: FONTS.bold,
     fontSize: 22,
-    color: "white",
+    color: COLORS.white,
   },
 });

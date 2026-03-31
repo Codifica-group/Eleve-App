@@ -2,266 +2,162 @@ import React, { useState } from "react";
 import {
   View,
   Text,
-  TextInput,
   TouchableOpacity,
-  StyleSheet,
-  ScrollView,
   Image,
+  ScrollView,
+  StyleSheet,
 } from "react-native";
 import { FontAwesome } from "@expo/vector-icons";
+import SafeScreen from "../components/common/SafeScreen";
+import Input from "../components/common/Input";
+import Button from "../components/common/Button";
+import SelectionGroup from "../components/common/SelectionGroup";
+import { OPCOES_SEXO, OPCOES_PORTE } from "../constants/data";
+import { COLORS, FONTS, SPACING } from "../constants/theme";
 
-// ─── Validações ───────────────────────────────────────────────────────────────
-
-function validarNome(valor) {
-  return valor.trim().length >= 2;
-}
-
-const OPCOES_SEXO = ["Macho", "Fêmea"];
-const OPCOES_PORTE = ["Pequeno", "Médio", "Grande"];
-
-// ─── Componente de campo de texto ─────────────────────────────────────────────
-
-function Campo({ label, value, onChangeText, onBlur, placeholder, erro, tocado }) {
-  const exibirErro = tocado && erro;
-  return (
-    <View style={styles.campoWrapper}>
-      <Text style={styles.label}>{label}</Text>
-      <TextInput
-        style={[styles.input, exibirErro && styles.inputErro]}
-        placeholder={placeholder}
-        placeholderTextColor="rgba(255,255,255,0.55)"
-        value={value}
-        onChangeText={onChangeText}
-        onBlur={onBlur}
-        autoCapitalize="words"
-      />
-      {exibirErro && (
-        <View style={styles.erroRow}>
-          <FontAwesome name="exclamation-circle" size={12} color="#FFE066" />
-          <Text style={styles.erroTexto}>{erro}</Text>
-        </View>
-      )}
-    </View>
-  );
-}
-
-// ─── Componente de seleção por botões ─────────────────────────────────────────
-
-function Selecao({ label, opcoes, valor, onChange }) {
-  return (
-    <View style={styles.campoWrapper}>
-      <Text style={styles.label}>{label}</Text>
-      <View style={styles.opcoesBotoes}>
-        {opcoes.map(op => (
-          <TouchableOpacity
-            key={op}
-            style={[styles.opcaoBotao, valor === op && styles.opcaoBotaoAtivo]}
-            onPress={() => onChange(op)}
-            activeOpacity={0.8}
-          >
-            <Text style={[styles.opcaoBotaoTexto, valor === op && styles.opcaoBotaoTextoAtivo]}>
-              {op}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-    </View>
-  );
-}
-
-// ─── Tela principal ───────────────────────────────────────────────────────────
-
-export default function PetRegistration({ onAddPhoto, onFinish, savedImage }) {
-  const [campos, setCampos] = useState({ nome: "", raca: "" });
+export default function PetRegistrationScreen({ navigation, route }) {
+  const { nomeUsuario, telefone, email, endereco, cep } = route.params || {};
+  const [campos, setCampos] = useState({ nomePet: "", raca: "" });
   const [sexo, setSexo] = useState("");
   const [porte, setPorte] = useState("");
-  const [tocados, setTocados] = useState({});
+  const [fotoPet, setFotoPet] = useState(null);
 
   function atualizar(campo, valor) {
-    setCampos(prev => ({ ...prev, [campo]: valor }));
+    setCampos((prev) => ({ ...prev, [campo]: valor }));
   }
-
-  function marcarTocado(campo) {
-    setTocados(prev => ({ ...prev, [campo]: true }));
-  }
-
-  const erros = {
-    nome: !validarNome(campos.nome) ? "Informe o nome do pet" : null,
-  };
 
   function finalizar() {
-    setTocados({ nome: true });
-    if (erros.nome) return;
-    if (onFinish) onFinish();
+    navigation.navigate("Home", {
+      nomeUsuario,
+      telefone,
+      email,
+      endereco,
+      cep,
+      nomePet: campos.nomePet,
+      racaPet: campos.raca,
+      sexoPet: sexo,
+      portePet: porte,
+      fotoPet,
+    });
   }
 
-  function adicionarOutro() {
-    setTocados({ nome: true });
-    if (erros.nome) return;
-    setCampos({ nome: "", raca: "" });
-    setSexo("");
-    setPorte("");
-    setTocados({});
+  function abrirUploadFoto() {
+    navigation.navigate("UploadPhoto");
   }
+
+  // Receber foto da tela de upload via route params
+  React.useEffect(() => {
+    if (route.params?.selectedImage) {
+      setFotoPet(route.params.selectedImage);
+    }
+  }, [route.params?.selectedImage]);
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.content}
-      showsVerticalScrollIndicator={false}
-      keyboardShouldPersistTaps="handled"
-    >
-      <Text style={styles.titulo}>Cadastro do Pet 🐾</Text>
-      <Text style={styles.subtitulo}>Conte-nos sobre seu amigo</Text>
+    <SafeScreen avoidKeyboard backgroundColor={COLORS.primary}>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
+        <Text style={styles.titulo}>Cadastro do Pet 🐾</Text>
+        <Text style={styles.subtitulo}>Conte-nos sobre seu amigo</Text>
 
-      <Campo
-        label="Nome do Pet"
-        value={campos.nome}
-        onChangeText={v => atualizar("nome", v)}
-        onBlur={() => marcarTocado("nome")}
-        placeholder="Ex: Caramelo"
-        erro={erros.nome}
-        tocado={tocados.nome}
-      />
+        <Input
+          label="Nome do Pet"
+          value={campos.nomePet}
+          onChangeText={(v) => atualizar("nomePet", v)}
+          placeholder="Ex: Caramelo"
+          autoCapitalize="words"
+        />
 
-      <Selecao
-        label="Sexo"
-        opcoes={OPCOES_SEXO}
-        valor={sexo}
-        onChange={setSexo}
-      />
+        <SelectionGroup
+          label="Sexo"
+          opcoes={OPCOES_SEXO}
+          valor={sexo}
+          onChange={setSexo}
+        />
 
-      {/* Foto */}
-      <Text style={styles.label}>Foto do Pet</Text>
-      <TouchableOpacity style={styles.photoUpload} onPress={onAddPhoto} activeOpacity={0.8}>
-        {savedImage ? (
-          <Image source={{ uri: savedImage }} style={styles.previewImage} />
-        ) : (
-          <View style={styles.photoPlaceholder}>
-            <FontAwesome name="camera" size={36} color="rgba(255,255,255,0.7)" />
-            <Text style={styles.photoPlaceholderText}>Toque para adicionar</Text>
-          </View>
-        )}
-      </TouchableOpacity>
-
-      <Campo
-        label="Raça"
-        value={campos.raca}
-        onChangeText={v => atualizar("raca", v)}
-        onBlur={() => {}}
-        placeholder="Ex: Labrador"
-        erro={null}
-        tocado={false}
-      />
-
-      <Selecao
-        label="Porte"
-        opcoes={OPCOES_PORTE}
-        valor={porte}
-        onChange={setPorte}
-      />
-
-      <View style={styles.buttonRow}>
-        <TouchableOpacity style={styles.btnSecundario} onPress={adicionarOutro} activeOpacity={0.8}>
-          <FontAwesome name="plus" size={14} color="#347C8C" />
-          <Text style={styles.btnSecundarioTexto}>Outro Pet</Text>
+        {/* Foto */}
+        <Text style={styles.label}>Foto do Pet</Text>
+        <TouchableOpacity
+          style={styles.photoUpload}
+          onPress={abrirUploadFoto}
+          activeOpacity={0.8}
+        >
+          {fotoPet ? (
+            <Image source={{ uri: fotoPet }} style={styles.previewImage} />
+          ) : (
+            <View style={styles.photoPlaceholder}>
+              <FontAwesome
+                name="camera"
+                size={36}
+                color="rgba(255,255,255,0.7)"
+              />
+              <Text style={styles.photoPlaceholderText}>
+                Toque para adicionar
+              </Text>
+            </View>
+          )}
         </TouchableOpacity>
-        <TouchableOpacity style={styles.btnPrimario} onPress={finalizar} activeOpacity={0.8}>
-          <Text style={styles.btnPrimarioTexto}>Finalizar</Text>
-        </TouchableOpacity>
-      </View>
 
-      <View style={{ height: 50 }} />
-    </ScrollView>
+        <Input
+          label="Raça"
+          value={campos.raca}
+          onChangeText={(v) => atualizar("raca", v)}
+          onBlur={() => {}}
+          placeholder="Ex: Labrador"
+          autoCapitalize="words"
+          erro={null}
+          tocado={false}
+        />
+
+        <SelectionGroup
+          label="Porte"
+          opcoes={OPCOES_PORTE}
+          valor={porte}
+          onChange={setPorte}
+        />
+
+        <Button
+          title="Finalizar"
+          onPress={finalizar}
+          style={{ marginTop: 32 }}
+        />
+      </ScrollView>
+    </SafeScreen>
   );
 }
 
-// ─── Estilos ──────────────────────────────────────────────────────────────────
-
 const styles = StyleSheet.create({
-  container: {
+  scroll: {
     flex: 1,
-    backgroundColor: "#6FB4C7",
   },
   content: {
-    paddingHorizontal: 24,
+    paddingHorizontal: SPACING.lg,
     paddingBottom: 40,
   },
   titulo: {
     fontSize: 30,
-    marginTop: 48,
+    marginTop: SPACING.xxl,
     marginBottom: 4,
-    color: "#FFFFFF",
-    fontFamily: "QuicksandBold",
+    color: COLORS.white,
+    fontFamily: FONTS.bold,
   },
   subtitulo: {
     fontSize: 14,
     color: "rgba(255,255,255,0.75)",
-    fontFamily: "Quicksand",
-    marginBottom: 24,
-  },
-  campoWrapper: {
-    marginBottom: 2,
+    fontFamily: FONTS.regular,
+    marginBottom: SPACING.lg,
   },
   label: {
     fontSize: 12,
-    fontFamily: "QuicksandBold",
-    color: "rgba(255,255,255,0.9)",
+    fontFamily: FONTS.bold,
+    color: COLORS.labelColor,
     marginTop: 16,
     marginBottom: 6,
     textTransform: "uppercase",
     letterSpacing: 0.8,
-  },
-  input: {
-    backgroundColor: "rgba(255,255,255,0.22)",
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 15,
-    fontFamily: "Quicksand",
-    color: "#FFFFFF",
-    borderWidth: 1.5,
-    borderColor: "rgba(255,255,255,0.3)",
-  },
-  inputErro: {
-    borderColor: "#FFE066",
-    backgroundColor: "rgba(255,224,102,0.15)",
-  },
-  erroRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    marginTop: 5,
-  },
-  erroTexto: {
-    fontSize: 12,
-    fontFamily: "Quicksand",
-    color: "#FFE066",
-  },
-  opcoesBotoes: {
-    flexDirection: "row",
-    gap: 10,
-  },
-  opcaoBotao: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 12,
-    alignItems: "center",
-    backgroundColor: "rgba(255,255,255,0.22)",
-    borderWidth: 1.5,
-    borderColor: "rgba(255,255,255,0.3)",
-  },
-  opcaoBotaoAtivo: {
-    backgroundColor: "#FFFFFF",
-    borderColor: "#FFFFFF",
-  },
-  opcaoBotaoTexto: {
-    fontFamily: "QuicksandBold",
-    fontSize: 14,
-    color: "rgba(255,255,255,0.85)",
-  },
-  opcaoBotaoTextoAtivo: {
-    color: "#347C8C",
   },
   photoUpload: {
     height: 150,
@@ -285,7 +181,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   photoPlaceholderText: {
-    fontFamily: "Quicksand",
+    fontFamily: FONTS.regular,
     fontSize: 13,
     color: "rgba(255,255,255,0.7)",
   },
@@ -296,29 +192,10 @@ const styles = StyleSheet.create({
   },
   btnSecundario: {
     flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    paddingVertical: 15,
-    borderRadius: 40,
-    backgroundColor: "#FFFFFF",
-  },
-  btnSecundarioTexto: {
-    color: "#347C8C",
-    fontSize: 15,
-    fontFamily: "QuicksandBold",
+    backgroundColor: COLORS.white,
   },
   btnPrimario: {
     flex: 1,
-    paddingVertical: 15,
-    borderRadius: 40,
-    alignItems: "center",
-    backgroundColor: "#1A5F6E",
-  },
-  btnPrimarioTexto: {
-    color: "#FFFFFF",
-    fontSize: 15,
-    fontFamily: "QuicksandBold",
+    backgroundColor: COLORS.primaryDark,
   },
 });

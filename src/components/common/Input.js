@@ -13,6 +13,7 @@ export default function Input({
   secureTextEntry,
   erro,
   tocado,
+  editable = true,
   autoCapitalize = "none",
 }) {
   const exibirErro = tocado && erro;
@@ -21,7 +22,7 @@ export default function Input({
     <View style={styles.wrapper}>
       <Text style={styles.label}>{label}</Text>
       <TextInput
-        style={[styles.input, exibirErro && styles.inputErro]}
+        style={[styles.input, !editable && styles.inputDesabilitado, exibirErro && styles.inputErro]}
         placeholder={placeholder}
         placeholderTextColor={COLORS.placeholder}
         value={value}
@@ -30,6 +31,7 @@ export default function Input({
         keyboardType={keyboardType || "default"}
         secureTextEntry={secureTextEntry || false}
         autoCapitalize={autoCapitalize}
+        editable={editable}
       />
       {exibirErro && (
         <View style={styles.erroRow}>
@@ -68,6 +70,9 @@ const styles = StyleSheet.create({
   inputErro: {
     borderColor: COLORS.warning,
     backgroundColor: "rgba(255,224,102,0.15)",
+  },
+  inputDesabilitado: {
+    opacity: 0.75,
   },
   erroRow: {
     flexDirection: "row",

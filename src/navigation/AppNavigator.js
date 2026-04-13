@@ -3,6 +3,7 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 
 import LoadingScreen from "../screens/LoadingScreen";
 import OnboardingScreen from "../screens/OnboardingScreen";
+import LoginScreen from "../screens/LoginScreen";
 import RegisterScreen from "../screens/RegisterScreen";
 import PetRegistrationScreen from "../screens/PetRegistration";
 import UploadPhotoScreen from "../screens/UploadPhotoScreen";
@@ -21,6 +22,7 @@ export default function AppNavigator() {
     >
       <Stack.Screen name="Loading" component={LoadingScreen} />
       <Stack.Screen name="Onboarding" component={OnboardingScreen} />
+      <Stack.Screen name="Login" component={LoginScreen} />
       <Stack.Screen name="Register" component={RegisterScreen} />
       <Stack.Screen name="PetRegistration" component={PetRegistrationScreen} />
       <Stack.Screen

@@ -1,5 +1,5 @@
 import React from "react";
-import { TouchableOpacity, Text, StyleSheet } from "react-native";
+import { TouchableOpacity, Text, StyleSheet, ActivityIndicator } from "react-native";
 import { COLORS, FONTS } from "../../constants/theme";
 
 export default function Button({
@@ -8,20 +8,31 @@ export default function Button({
   variant = "primary",
   icon,
   style,
+  desabilitado = false,
+  carregando = false,
 }) {
   const isPrimary = variant === "primary";
+  const bloqueado = desabilitado || carregando;
 
   return (
     <TouchableOpacity
       style={[
         styles.base,
         isPrimary ? styles.primary : styles.secondary,
+        bloqueado && styles.desabilitado,
         style,
       ]}
-      onPress={onPress}
-      activeOpacity={0.8}
+      onPress={bloqueado ? undefined : onPress}
+      activeOpacity={bloqueado ? 1 : 0.8}
     >
-      {icon}
+      {carregando ? (
+        <ActivityIndicator
+          size="small"
+          color={isPrimary ? COLORS.primaryMedium : COLORS.white}
+        />
+      ) : (
+        icon
+      )}
       <Text
         style={[
           styles.text,
@@ -61,5 +72,8 @@ const styles = StyleSheet.create({
   },
   secondaryText: {
     color: COLORS.white,
+  },
+  desabilitado: {
+    opacity: 0.65,
   },
 });

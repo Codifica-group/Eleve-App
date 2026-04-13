@@ -11,30 +11,29 @@ export default function SafeScreen({
   backgroundColor = COLORS.primary,
   avoidKeyboard = false,
 }) {
-  const content = (
+  return (
     <SafeAreaView style={[styles.container, { backgroundColor }, style]}>
       <StatusBar style={statusBarStyle} />
-      {children}
+      {avoidKeyboard ? (
+        <KeyboardAvoidingView
+          style={styles.keyboard}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
+        >
+          {children}
+        </KeyboardAvoidingView>
+      ) : (
+        children
+      )}
     </SafeAreaView>
   );
-
-  if (avoidKeyboard) {
-    return (
-      <KeyboardAvoidingView
-        style={{ flex: 1, backgroundColor }}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
-      >
-        {content}
-      </KeyboardAvoidingView>
-    );
-  }
-
-  return content;
 }
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
+  },
+  keyboard: {
     flex: 1,
   },
 });

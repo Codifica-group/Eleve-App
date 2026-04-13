@@ -54,6 +54,9 @@ const VALIDADORES = {
   email: { fn: validarEmail, msg: "E-mail inválido" },
   senha: { fn: validarSenha, msg: "Mínimo de 6 caracteres" },
   endereco: { fn: (v) => v.trim().length >= 5, msg: "Informe o endereço completo" },
+  bairro: { fn: (v) => v.trim().length >= 2, msg: "Informe o bairro" },
+  cidade: { fn: (v) => v.trim().length >= 2, msg: "Informe a cidade" },
+  numEndereco: { fn: (v) => v.trim().length >= 1, msg: "Informe o número" },
   cep: { fn: validarCep, msg: "CEP inválido (8 dígitos)" },
   nomePet: { fn: validarNomePet, msg: "Informe o nome do pet" },
 };

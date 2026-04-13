@@ -7,17 +7,26 @@ import {
   StyleSheet,
   Animated,
 } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import SafeScreen from "../components/common/SafeScreen";
 import { ONBOARDING_IMAGES } from "../constants/data";
 import { COLORS, FONTS } from "../constants/theme";
 
 const TOTAL = ONBOARDING_IMAGES.length;
+const ONBOARDING_SEEN_KEY = "@eleve:onboarding_seen";
 
 export default function OnboardingScreen({ navigation }) {
   const [index, setIndex] = useState(0);
   const progressAnim = useRef(new Animated.Value(0)).current;
+  const hasNavigatedRef = useRef(false);
 
-  const goToRegister = () => navigation.replace("Register");
+  const goToLogin = () => {
+    if (hasNavigatedRef.current) return;
+    hasNavigatedRef.current = true;
+
+    AsyncStorage.setItem(ONBOARDING_SEEN_KEY, "true").catch(() => null);
+    navigation.replace("Login");
+  };
 
   useEffect(() => {
     Animated.timing(progressAnim, {
@@ -29,20 +38,27 @@ export default function OnboardingScreen({ navigation }) {
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setIndex((prev) => {
-        if (prev < TOTAL - 1) return prev + 1;
-        goToRegister();
-        return prev;
-      });
+      setIndex((prev) => (prev < TOTAL - 1 ? prev + 1 : prev));
     }, 7000);
+
     return () => clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    if (index !== TOTAL - 1) return;
+
+    const endTimer = setTimeout(() => {
+      goToLogin();
+    }, 7000);
+
+    return () => clearTimeout(endTimer);
+  }, [index]);
 
   function goNext() {
     if (index < TOTAL - 1) {
       setIndex((prev) => prev + 1);
     } else {
-      goToRegister();
+      goToLogin();
     }
   }
 
@@ -108,7 +124,7 @@ export default function OnboardingScreen({ navigation }) {
 
       {/* ÁREA INFERIOR */}
       <View style={styles.bottomArea}>
-        <TouchableOpacity style={styles.startButton} onPress={goToRegister}>
+        <TouchableOpacity style={styles.startButton} onPress={goToLogin}>
           <Text style={styles.startText}>Começar</Text>
         </TouchableOpacity>
       </View>

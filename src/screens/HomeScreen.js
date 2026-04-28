@@ -5,7 +5,7 @@ import { StatusBar } from "expo-status-bar";
 
 import Header from "../components/home/Header";
 import ServiceCard from "../components/home/ServiceCard";
-import SearchBar from "../components/home/SearchBar";
+import AIBar from "../components/home/AIBar";
 import MessageCard from "../components/home/MessageCard";
 import PromoCarousel from "../components/home/PromoCarousel";
 
@@ -44,7 +44,7 @@ export default function HomeScreen({ route, navigation }) {
           ))}
         </View>
 
-        <SearchBar value={busca} onChangeText={setBusca} />
+        <AIBar value={busca} onChangeText={setBusca} />
 
         <MessageCard mensagem={mensagem} />
 

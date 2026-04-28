@@ -7,6 +7,7 @@ import { COLORS, FONTS, SPACING } from "../constants/theme";
 import useFormValidation from "../hooks/useFormValidation";
 import { logarUsuario } from "../api/usuarios/logarUsuario";
 import { obterMensagemAmigavel } from "../api/compartilhado/errosApi";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 function inferirNomeUsuario(email) {
   const parte = String(email || "").split("@")[0] || "";
@@ -87,6 +88,10 @@ export default function LoginScreen({ navigation, route }) {
       }
 
       const nomeUsuario = inferirNomeUsuario(campos.email);
+
+      await AsyncStorage.setItem('@eleve:token_acesso', token);
+      await AsyncStorage.setItem('@eleve:email_usuario', campos.email);
+      await AsyncStorage.setItem('@eleve:nome_usuario', nomeUsuario);
 
       navigation.reset({
         index: 0,

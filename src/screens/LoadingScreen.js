@@ -6,6 +6,7 @@ import { COLORS } from "../constants/theme";
 
 const LOADING_DURATION = 3000;
 const ONBOARDING_SEEN_KEY = "@eleve:onboarding_seen";
+const TOKEN_KEY = "@eleve:token_acesso";
 
 export default function LoadingScreen({ navigation }) {
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -13,8 +14,6 @@ export default function LoadingScreen({ navigation }) {
 
   useEffect(() => {
     let isActive = true;
-    let onboardingSeen = false;
-    let hasStorageValue = false;
 
     Animated.parallel([
       Animated.timing(fadeAnim, {
@@ -30,26 +29,55 @@ export default function LoadingScreen({ navigation }) {
       }),
     ]).start();
 
-    AsyncStorage.getItem(ONBOARDING_SEEN_KEY)
-      .then((value) => {
-        if (!isActive) return;
-        hasStorageValue = true;
-        onboardingSeen = value === "true";
-      })
-      .catch(() => {
-        // Se falhar, mantem fluxo de primeiro acesso como fallback
-      });
-
-    const timer = setTimeout(() => {
+    // Busca o Onboarding e a Sessão ao mesmo tempo
+    Promise.all([
+      AsyncStorage.getItem(ONBOARDING_SEEN_KEY),
+      AsyncStorage.getItem(TOKEN_KEY),
+      AsyncStorage.getItem('@eleve:email_usuario'),
+      AsyncStorage.getItem('@eleve:nome_usuario')
+    ]).then(([onboardingVal, tokenVal, emailVal, nomeVal]) => {
       if (!isActive) return;
 
-      const nextRoute = hasStorageValue && onboardingSeen ? "Login" : "Onboarding";
-      navigation.replace(nextRoute);
-    }, LOADING_DURATION);
+      const onboardingSeen = onboardingVal === "true";
+
+      const timer = setTimeout(() => {
+        if (!isActive) return;
+
+        // Se tem token, vai pra Home logado
+        if (onboardingSeen && tokenVal) {
+          navigation.reset({
+            index: 0,
+            routes: [
+              {
+                name: "Home",
+                params: {
+                  tokenAcesso: tokenVal,
+                  email: emailVal || "",
+                  nomeUsuario: nomeVal || "Usuário",
+                },
+              },
+            ],
+          });
+        } 
+        // Se já viu o onboarding mas não tem token, vai pro Login
+        else if (onboardingSeen) {
+          navigation.replace("Login");
+        } 
+        // Primeira vez no app
+        else {
+          navigation.replace("Onboarding");
+        }
+      }, LOADING_DURATION);
+
+    }).catch(() => {
+      // Em caso de erro na leitura, envia pro Onboarding por segurança
+      if (isActive) {
+        setTimeout(() => navigation.replace("Onboarding"), LOADING_DURATION);
+      }
+    });
 
     return () => {
       isActive = false;
-      clearTimeout(timer);
     };
   }, [navigation]);
 

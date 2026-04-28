@@ -7,11 +7,13 @@ import {
   Modal, 
   TouchableOpacity, 
   ActivityIndicator, 
-  ScrollView 
+  ScrollView ,
+  Platform
 } from "react-native";
 import { FontAwesome } from "@expo/vector-icons";
 import { Audio } from "expo-av";
 import * as DocumentPicker from "expo-document-picker";
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { COLORS, FONTS } from "../../constants/theme";
 
 export default function AIBar() {
@@ -89,45 +91,68 @@ export default function AIBar() {
 
   // Integração com o Endpoint
   async function enviarAudioParaAPI(uri, name, type) {
-    setModalVisible(false); // Fecha o modal de menu
-    setResultModalVisible(true); // Abre o modal de resposta
+    setModalVisible(false);
+    setResultModalVisible(true);
     setIsLoading(true);
     setAiResponse("");
 
-    const formData = new FormData();
-    formData.append('audio', {
-      uri: uri,
-      name: name,
-      type: type,
-    });
-    formData.append('prompt', PROMPT_VETERINARIO);
-
     try {
-      // Dica: Se estiver testando no emulador Android, 'localhost' pode precisar ser '10.0.2.2'
+      const formData = new FormData();
+      formData.append('prompt', PROMPT_VETERINARIO);
+
+      // ==============================================================
+      // CORREÇÃO: Tratamento diferente para Web e para Mobile (Celular)
+      // ==============================================================
+      if (Platform.OS === 'web') {
+        // Na web, precisamos baixar o conteúdo da URI gerada e anexar como arquivo real (Blob)
+        const res = await fetch(uri);
+        const blob = await res.blob();
+        formData.append('audio', blob, name || 'audio.m4a');
+      } else {
+        // No celular (Android/iOS), usamos o formato padrão do React Native
+        const fileUri = Platform.OS === 'android' && !uri.startsWith('file://') ? `file://${uri}` : uri;
+        formData.append('audio', {
+          uri: fileUri,
+          name: name || 'audio.m4a',
+          type: type || 'audio/mp4',
+        });
+      }
+      // ==============================================================
+
+      const token = await AsyncStorage.getItem('@eleve:token_acesso'); 
+
+      if (!token) {
+        throw new Error("Token de autenticação não encontrado. Por favor, faça login novamente.");
+      }
+
       const response = await fetch('http://localhost:8080/api/audio/processar', {
         method: 'POST',
         headers: {
-          'Authorization': 'Bearer ey', // Substitua pelo token real do usuário se houver
-          'Content-Type': 'multipart/form-data',
+          'Authorization': `Bearer ${token}`, 
+          // O Content-Type NÃO é informado aqui para o fetch gerenciar o multipart e o boundary
         },
         body: formData,
       });
 
-      // Lida com a resposta. Ajuste conforme o formato de retorno do seu back-end (texto puro ou JSON)
+      if (!response.ok) {
+        if (response.status === 403) {
+           throw new Error("Sessão expirada ou token inválido. Faça login novamente.");
+        }
+        throw new Error(`Erro na API: ${response.status}`);
+      }
+
       const dataText = await response.text(); 
       
       try {
         const dataJson = JSON.parse(dataText);
-        // Se a API retorna um JSON, extraia o campo correto. Ex: dataJson.resposta
         setAiResponse(dataJson.resposta || dataText);
       } catch (e) {
-        // Se não for JSON, exibe como texto puro
         setAiResponse(dataText);
       }
 
     } catch (error) {
       console.error('Erro na requisição da IA:', error);
-      setAiResponse("Não foi possível se conectar à Inteligência Artificial. Tente novamente mais tarde.");
+      setAiResponse(error.message || "Não foi possível se conectar à Inteligência Artificial. Tente novamente mais tarde.");
     } finally {
       setIsLoading(false);
     }

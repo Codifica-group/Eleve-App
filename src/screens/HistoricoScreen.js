@@ -26,7 +26,6 @@ function getDiaSemana(ano, mes, dia) {
     .toUpperCase();
 }
 
-// Dados mockados de histórico por mês (chave: "YYYY-MM")
 const HISTORICO_MOCK = {
   "2026-01": [
     { dia: 3, servico: "Banho e Hidratação", valor: "R$ 100,00" },

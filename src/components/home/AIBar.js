@@ -15,12 +15,14 @@ import { Audio } from "expo-av";
 import * as DocumentPicker from "expo-document-picker";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { COLORS, FONTS } from "../../constants/theme";
+import { enviarRequisicaoHttp } from "../../api/compartilhado/clienteHttp";
+import { anexarArquivoAoFormData } from "../../utils/AIUtils";
+import Markdown from 'react-native-markdown-display';
 
 export default function AIBar() {
   const [modalVisible, setModalVisible] = useState(false);
   const [resultModalVisible, setResultModalVisible] = useState(false);
   
-  // Estados para Gravação e Requisição
   const [recording, setRecording] = useState();
   const [isRecording, setIsRecording] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -28,7 +30,6 @@ export default function AIBar() {
 
   const PROMPT_VETERINARIO = "Você é um veterinário experiente e especialista em saúde, nutrição e comportamento de cachorros. Escute a dúvida do usuário e responda de forma clara, acolhedora e altamente profissional.";
 
-  // Função para iniciar ou parar a gravação
   async function handleRecordPress() {
     if (isRecording) {
       await stopRecording();
@@ -72,7 +73,6 @@ export default function AIBar() {
     }
   }
 
-  // Função para selecionar arquivo de áudio já existente
   async function pickAudioFile() {
     try {
       const result = await DocumentPicker.getDocumentAsync({
@@ -89,7 +89,6 @@ export default function AIBar() {
     }
   }
 
-  // Integração com o Endpoint
   async function enviarAudioParaAPI(uri, name, type) {
     setModalVisible(false);
     setResultModalVisible(true);
@@ -100,59 +99,24 @@ export default function AIBar() {
       const formData = new FormData();
       formData.append('prompt', PROMPT_VETERINARIO);
 
-      // ==============================================================
-      // CORREÇÃO: Tratamento diferente para Web e para Mobile (Celular)
-      // ==============================================================
-      if (Platform.OS === 'web') {
-        // Na web, precisamos baixar o conteúdo da URI gerada e anexar como arquivo real (Blob)
-        const res = await fetch(uri);
-        const blob = await res.blob();
-        formData.append('audio', blob, name || 'audio.m4a');
-      } else {
-        // No celular (Android/iOS), usamos o formato padrão do React Native
-        const fileUri = Platform.OS === 'android' && !uri.startsWith('file://') ? `file://${uri}` : uri;
-        formData.append('audio', {
-          uri: fileUri,
-          name: name || 'audio.m4a',
-          type: type || 'audio/mp4',
-        });
-      }
-      // ==============================================================
+      await anexarArquivoAoFormData(formData, 'audio', uri, name || 'audio.m4a', type || 'audio/mp4');
 
-      const token = await AsyncStorage.getItem('@eleve:token_acesso'); 
-
-      if (!token) {
-        throw new Error("Token de autenticação não encontrado. Por favor, faça login novamente.");
-      }
-
-      const response = await fetch('http://localhost:8080/api/audio/processar', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`, 
-          // O Content-Type NÃO é informado aqui para o fetch gerenciar o multipart e o boundary
-        },
-        body: formData,
+      const respostaApi = await enviarRequisicaoHttp({
+        metodo: 'POST',
+        endpoint: '/audio/processar',
+        corpoFormData: formData
       });
 
-      if (!response.ok) {
-        if (response.status === 403) {
-           throw new Error("Sessão expirada ou token inválido. Faça login novamente.");
-        }
-        throw new Error(`Erro na API: ${response.status}`);
-      }
-
-      const dataText = await response.text(); 
-      
-      try {
-        const dataJson = JSON.parse(dataText);
-        setAiResponse(dataJson.resposta || dataText);
-      } catch (e) {
-        setAiResponse(dataText);
-      }
+      setAiResponse(respostaApi?.resposta || respostaApi);
 
     } catch (error) {
       console.error('Erro na requisição da IA:', error);
-      setAiResponse(error.message || "Não foi possível se conectar à Inteligência Artificial. Tente novamente mais tarde.");
+      
+      setAiResponse(
+        error?.mensagem || 
+        error?.message || 
+        "Não foi possível se conectar à Inteligência Artificial. Tente novamente mais tarde."
+      );
     } finally {
       setIsLoading(false);
     }
@@ -166,7 +130,6 @@ export default function AIBar() {
         </Text>
       </Pressable>
 
-      {/* Modal 1: Menu de Opções de Áudio */}
       <Modal
         animationType="fade"
         transparent={true}
@@ -197,17 +160,14 @@ export default function AIBar() {
         </Pressable>
       </Modal>
 
-      {/* Modal 2: Resultado da IA */}
       <Modal
         animationType="slide"
         transparent={true}
         visible={resultModalVisible}
-        // Retiramos o onRequestClose para Android para forçar o clique no botão X, ou pode mantê-lo se desejar que o botão voltar do Android feche.
       >
         <View style={styles.resultModalOverlay}>
           <View style={styles.resultModalContent}>
             
-            {/* Botão de Fechar 'X' posicionado no topo direito */}
             <TouchableOpacity 
               style={styles.closeIcon} 
               onPress={() => !isLoading && setResultModalVisible(false)}
@@ -223,7 +183,9 @@ export default function AIBar() {
               </View>
             ) : (
               <ScrollView style={styles.responseScroll} showsVerticalScrollIndicator={false}>
-                <Text style={styles.responseText}>{aiResponse}</Text>
+                <Markdown style={markdownStyles}>
+                  {aiResponse}
+                </Markdown>
               </ScrollView>
             )}
 
@@ -281,7 +243,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   roundButtonRecording: {
-    backgroundColor: "#E53935", // Cor vermelha ao gravar
+    backgroundColor: "#E53935",
   },
   roundButtonText: {
     color: COLORS.white || "#FFF",
@@ -312,7 +274,6 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.regular,
     fontSize: 15,
   },
-  // Estilos do Modal de Resultado
   resultModalOverlay: {
     flex: 1,
     justifyContent: "center",
@@ -321,7 +282,7 @@ const styles = StyleSheet.create({
   },
   resultModalContent: {
     width: '90%',
-    height: '60%', // Ocupa uma boa parte da tela para respostas longas
+    height: '60%',
     backgroundColor: COLORS.white || "#FFF",
     borderRadius: 20,
     paddingTop: 40,
@@ -363,3 +324,42 @@ const styles = StyleSheet.create({
     lineHeight: 24,
   }
 });
+
+const markdownStyles = {
+  body: {
+    fontFamily: FONTS?.regular,
+    color: COLORS?.dark || '#333',
+    fontSize: 16,
+    lineHeight: 24,
+  },
+  heading1: {
+    fontFamily: FONTS?.bold,
+    fontSize: 22,
+    color: COLORS?.primary || '#000',
+    marginTop: 10,
+    marginBottom: 5,
+  },
+  heading2: {
+    fontFamily: FONTS?.bold,
+    fontSize: 20,
+    color: COLORS?.primary || '#000',
+    marginTop: 10,
+    marginBottom: 5,
+  },
+  strong: {
+    fontFamily: FONTS?.bold,
+  },
+  paragraph: {
+    marginTop: 5,
+    marginBottom: 10,
+  },
+  list_item: {
+    marginTop: 5,
+  },
+  bullet_list: {
+    marginBottom: 10,
+  },
+  ordered_list: {
+    marginBottom: 10,
+  }
+};

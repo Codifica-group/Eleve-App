@@ -1,3 +1,5 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { obterEnderecoBaseApi } from "./configuracaoApi";
 import { ErroHttp, ErroRede, ErroTimeout } from "./errosApi";
 
 function sanitizarObjetoParaLog(valor) {
@@ -63,10 +65,18 @@ async function lerResposta(response) {
   return texto;
 }
 
-function montarHeadersPadrao(headers) {
-  const base = {
-    Accept: "application/json",
-  };
+async function montarHeadersPadrao(headers, isFormData) {
+  const token = await AsyncStorage.getItem('@eleve:token_acesso');
+  const base = {};
+
+  if (!isFormData) {
+    base["Accept"] = "application/json";
+    base["Content-Type"] = "application/json";
+  }
+
+  if (token) {
+    base["Authorization"] = `Bearer ${token}`;
+  }
 
   return {
     ...base,
@@ -76,9 +86,10 @@ function montarHeadersPadrao(headers) {
 
 export async function enviarRequisicaoHttp({
   metodo,
-  url,
+  endpoint,
   headers,
   corpoJson,
+  corpoFormData,
   timeoutMs = 15000,
 }) {
   const controller = new AbortController();
@@ -86,12 +97,13 @@ export async function enviarRequisicaoHttp({
   const inicioMs = Date.now();
 
   try {
-    const headersFinais = montarHeadersPadrao(headers);
-    console.log("[API] ->", metodo, url, {
-      timeoutMs,
-      headers: sanitizarHeadersParaLog(headersFinais),
-      corpo: sanitizarObjetoParaLog(corpoJson),
-    });
+    const baseUrl = obterEnderecoBaseApi();
+    const urlFinal = `${baseUrl}${endpoint}`;
+    
+    const isFormData = corpoFormData !== undefined;
+    const headersFinais = await montarHeadersPadrao(headers, isFormData);
+
+    console.log("[API] ->", metodo, urlFinal, {});
 
     const init = {
       method: metodo,
@@ -101,18 +113,12 @@ export async function enviarRequisicaoHttp({
 
     if (corpoJson !== undefined) {
       init.body = JSON.stringify(corpoJson);
-      init.headers = {
-        ...headersFinais,
-        "Content-Type": "application/json",
-      };
+    } else if (corpoFormData !== undefined) {
+      init.body = corpoFormData; 
     }
 
-    const response = await fetch(url, init);
+    const response = await fetch(urlFinal, init);
     const corpoResposta = await lerResposta(response);
-    console.log("[API] <-", metodo, url, {
-      statusHttp: response.status,
-      duracaoMs: Date.now() - inicioMs,
-    });
 
     if (!response.ok) {
       const mensagemConhecida = extrairMensagemServidor(corpoResposta);

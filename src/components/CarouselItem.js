@@ -12,7 +12,7 @@ export default function CarouselItem({ image, width }) {
 const styles = StyleSheet.create({
   container: {
     alignItems: "center",
-    height: 140, // Adicionei a altura aqui para a imagem aparecer
+    height: 140,
   },
   image: {
     height: "100%",

@@ -33,6 +33,6 @@ const styles = StyleSheet.create({
     backgroundColor: "white"
   },
   inactive: {
-    backgroundColor: "rgba(255, 255, 255, 0.4)" // Branco transparente para o rastro
+    backgroundColor: "rgba(255, 255, 255, 0.4)"
   }
 });

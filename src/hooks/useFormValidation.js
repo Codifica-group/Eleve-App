@@ -1,7 +1,5 @@
 import { useMemo } from "react";
 
-// ─── Validadores ─────────────────────────────────────────────────────────────
-
 function validarNomeCompleto(valor) {
   const partes = valor.trim().split(/\s+/);
   return partes.length >= 2 && partes.every((p) => p.length >= 2);
@@ -28,8 +26,6 @@ function validarNomePet(valor) {
   return valor.trim().length >= 2;
 }
 
-// ─── Formatadores ────────────────────────────────────────────────────────────
-
 export function formatarTelefone(valor) {
   const n = valor.replace(/\D/g, "").slice(0, 11);
   if (n.length <= 10)
@@ -45,8 +41,6 @@ export function formatarCep(valor) {
   const n = valor.replace(/\D/g, "").slice(0, 8);
   return n.replace(/(\d{5})(\d{0,3})/, (_, a, b) => (b ? `${a}-${b}` : a));
 }
-
-// ─── Regras por campo ────────────────────────────────────────────────────────
 
 const VALIDADORES = {
   nome: { fn: validarNomeCompleto, msg: "Informe nome e sobrenome" },

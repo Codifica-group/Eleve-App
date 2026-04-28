@@ -29,7 +29,6 @@ export default function LoadingScreen({ navigation }) {
       }),
     ]).start();
 
-    // Busca o Onboarding e a Sessão ao mesmo tempo
     Promise.all([
       AsyncStorage.getItem(ONBOARDING_SEEN_KEY),
       AsyncStorage.getItem(TOKEN_KEY),
@@ -43,7 +42,6 @@ export default function LoadingScreen({ navigation }) {
       const timer = setTimeout(() => {
         if (!isActive) return;
 
-        // Se tem token, vai pra Home logado
         if (onboardingSeen && tokenVal) {
           navigation.reset({
             index: 0,
@@ -59,18 +57,15 @@ export default function LoadingScreen({ navigation }) {
             ],
           });
         } 
-        // Se já viu o onboarding mas não tem token, vai pro Login
         else if (onboardingSeen) {
           navigation.replace("Login");
         } 
-        // Primeira vez no app
         else {
           navigation.replace("Onboarding");
         }
       }, LOADING_DURATION);
 
     }).catch(() => {
-      // Em caso de erro na leitura, envia pro Onboarding por segurança
       if (isActive) {
         setTimeout(() => navigation.replace("Onboarding"), LOADING_DURATION);
       }

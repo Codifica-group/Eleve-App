@@ -20,7 +20,6 @@ import { OPCOES_SEXO, OPCOES_PORTE } from "../constants/data";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
-// Componentes fora do render para evitar recriação e bug do teclado
 function ModalInput({ label, value, onChangeText, ...props }) {
   return (
     <View style={styles.modalInputWrapper}>
@@ -69,7 +68,6 @@ export default function PerfilScreen({ navigation, route }) {
   const insets = useSafeAreaInsets();
   const params = route?.params || {};
 
-  // Estado do usuário
   const [usuario, setUsuario] = useState({
     nome: params.nomeUsuario || "Usuário",
     email: params.email || "email@exemplo.com",
@@ -77,7 +75,6 @@ export default function PerfilScreen({ navigation, route }) {
     endereco: params.endereco || "Endereço não informado",
   });
 
-  // Estado dos pets (lista)
   const [pets, setPets] = useState([
     {
       nome: params.nomePet || "Pet",
@@ -88,7 +85,6 @@ export default function PerfilScreen({ navigation, route }) {
     },
   ]);
 
-  // Atualizar se params mudarem
   useEffect(() => {
     if (params.nomeUsuario) {
       setUsuario({
@@ -113,20 +109,17 @@ export default function PerfilScreen({ navigation, route }) {
     }
   }, [params.nomeUsuario, params.nomePet]);
 
-  // Modais
   const [menuVisivel, setMenuVisivel] = useState(false);
   const [editUserVisivel, setEditUserVisivel] = useState(false);
   const [editPetVisivel, setEditPetVisivel] = useState(false);
   const [petEditIndex, setPetEditIndex] = useState(0);
   const [selectPetVisivel, setSelectPetVisivel] = useState(false);
 
-  // Buffers de edição
   const [editUser, setEditUser] = useState({ ...usuario });
   const [editPet, setEditPet] = useState({ ...pets[0] });
 
   const primeiroNome = usuario.nome.trim().split(" ")[0];
 
-  // Ações do menu
   function abrirEditarPerfil() {
     setMenuVisivel(false);
     setEditUser({ ...usuario });
@@ -184,7 +177,6 @@ export default function PerfilScreen({ navigation, route }) {
     <View style={[styles.tela, { paddingTop: insets.top }]}>
       <StatusBar style="dark" />
 
-      {/* Header */}
       <View style={styles.header}>
         <Text style={styles.titulo}>Seu Perfil</Text>
         <View style={styles.headerIcons}>
@@ -203,7 +195,6 @@ export default function PerfilScreen({ navigation, route }) {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Card do Usuário */}
         <View style={styles.userCard}>
           <View style={styles.avatarContainer}>
             <View style={styles.avatarCircle}>

@@ -21,8 +21,6 @@ export default function HomeScreen({ route, navigation }) {
     () => MENSAGENS[Math.floor(Math.random() * MENSAGENS.length)]
   );
   
-  // O estado 'busca' foi removido porque o AIBar agora age como um disparador de modal independente
-
   return (
     <View style={[styles.tela, { paddingTop: insets.top }]}>
       <StatusBar style="dark" />

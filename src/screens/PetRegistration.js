@@ -45,7 +45,6 @@ export default function PetRegistrationScreen({ navigation, route }) {
     navigation.navigate("UploadPhoto");
   }
 
-  // Receber foto da tela de upload via route params
   React.useEffect(() => {
     if (route.params?.selectedImage) {
       setFotoPet(route.params.selectedImage);

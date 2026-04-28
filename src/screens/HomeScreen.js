@@ -20,7 +20,8 @@ export default function HomeScreen({ route, navigation }) {
   const [mensagem] = useState(
     () => MENSAGENS[Math.floor(Math.random() * MENSAGENS.length)]
   );
-  const [busca, setBusca] = useState("");
+  
+  // O estado 'busca' foi removido porque o AIBar agora age como um disparador de modal independente
 
   return (
     <View style={[styles.tela, { paddingTop: insets.top }]}>
@@ -44,7 +45,8 @@ export default function HomeScreen({ route, navigation }) {
           ))}
         </View>
 
-        <AIBar value={busca} onChangeText={setBusca} />
+        {/* Instanciamento limpo do AIBar */}
+        <AIBar />
 
         <MessageCard mensagem={mensagem} />
 

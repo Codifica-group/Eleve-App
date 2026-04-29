@@ -1,7 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { View, Text, ScrollView, StyleSheet } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import Header from "../components/home/Header";
 import ServiceCard from "../components/home/ServiceCard";
@@ -14,12 +15,24 @@ import { COLORS, FONTS, SPACING } from "../constants/theme";
 
 export default function HomeScreen({ route, navigation }) {
   const params = route?.params || {};
-  const nomeUsuario = params.nomeUsuario || "Usuário";
   const insets = useSafeAreaInsets();
 
+  const [nomeUsuario, setNomeUsuario] = useState(params.nomeUsuario || "Usuário");
   const [mensagem] = useState(
     () => MENSAGENS[Math.floor(Math.random() * MENSAGENS.length)]
   );
+
+  useEffect(() => {
+    async function carregarNomeUsuario() {
+      const nome = await AsyncStorage.getItem("@eleve:nome_usuario");
+      if (nome) {
+        setNomeUsuario(nome);
+      }
+    }
+    if (!params.nomeUsuario) {
+      carregarNomeUsuario();
+    }
+  }, [params.nomeUsuario]);
   
   return (
     <View style={[styles.tela, { paddingTop: insets.top }]}>
@@ -33,7 +46,7 @@ export default function HomeScreen({ route, navigation }) {
         <Header nomeUsuario={nomeUsuario} onSettingsPress={() => {}} />
 
         <Text style={styles.pergunta}>
-          Do que você e seu pet precisam hoje?
+          Do que seu pet precisa hoje?
         </Text>
 
         {/* Serviços */}

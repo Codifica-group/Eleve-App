@@ -6,6 +6,7 @@ import {
   ScrollView,
   StyleSheet,
   ActivityIndicator,
+  Alert
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
@@ -15,14 +16,18 @@ import { COLORS, FONTS, SPACING } from "../constants/theme";
 import { montarUrlBackend } from "../api/compartilhado/proxyBackend";
 import { obterOuSincronizarClienteId } from "../api/clientes/sincronizarCliente";
 import AgendaCard from "../components/agenda/AgendaCard";
+import ModalDetalhesAtendimento from "../components/agenda/ModalDetalhesAtendimento";
 
 export default function AgendaScreen({ navigation }) {
   const insets = useSafeAreaInsets();
   const [agendamentos, setAgendamentos] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  const [modalVisivel, setModalVisivel] = useState(false);
+  const [atendimentoSelecionado, setAtendimentoSelecionado] = useState(null);
+  const [processandoAcao, setProcessandoAcao] = useState(false);
+
   useEffect(() => {
-    // Atualiza a lista sempre que a tela ganha foco
     const unsubscribe = navigation.addListener("focus", () => {
       carregarAgenda();
     });
@@ -35,7 +40,6 @@ export default function AgendaScreen({ navigation }) {
       const clienteId = await obterOuSincronizarClienteId();
       const token = await AsyncStorage.getItem("@eleve:token_acesso");
       
-      // Monta a URL dinamicamente caso precise, usando o clienteId (ou fallback para 1)
       const url = montarUrlBackend(`solicitacoes-agenda/chat/${clienteId || 1}`);
 
       const response = await fetch(url, {
@@ -59,13 +63,60 @@ export default function AgendaScreen({ navigation }) {
     }
   }
 
+  function abrirDetalhe(item) {
+    setAtendimentoSelecionado(item);
+    setModalVisivel(true);
+  }
+
+  async function atualizarStatusAgendamento(novoStatus) {
+    if (!atendimentoSelecionado) return;
+    
+    setProcessandoAcao(true);
+    try {
+      const token = await AsyncStorage.getItem("@eleve:token_acesso");
+      const url = montarUrlBackend(`solicitacoes-agenda/${atendimentoSelecionado.id}`);
+
+      const payload = {
+        chatId: atendimentoSelecionado.chatId,
+        petId: atendimentoSelecionado.pet?.id,
+        servicos: atendimentoSelecionado.servicos?.map(s => ({ id: s.id, valor: s.valor || 0.0 })) || [],
+        valorDeslocamento: atendimentoSelecionado.valorDeslocamento || 0.0,
+        dataHoraInicio: atendimentoSelecionado.dataHoraInicio,
+        dataHoraFim: atendimentoSelecionado.dataHoraFim || "",
+        dataHoraSolicitacao: atendimentoSelecionado.dataHoraSolicitacao || "",
+        status: novoStatus
+      };
+
+      const response = await fetch(url, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!response.ok) {
+        throw new Error(`Erro ao atualizar para o status: ${novoStatus}`);
+      }
+
+      setModalVisivel(false);
+      carregarAgenda();
+    } catch (error) {
+      console.error("Falha ao atualizar status da agenda:", error);
+      Alert.alert("Erro", "Não foi possível alterar o status do agendamento.");
+    } finally {
+      setProcessandoAcao(false);
+    }
+  }
+
   return (
     <View style={[styles.tela, { paddingTop: insets.top }]}>
       <StatusBar style="dark" />
 
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.titulo}>Agenda</Text>
+        <Text style={styles.titulo}>Agendamento</Text>
       </View>
 
       <ScrollView
@@ -86,13 +137,22 @@ export default function AgendaScreen({ navigation }) {
             <AgendaCard 
               key={item.id || index} 
               item={item} 
-              onPress={() => {
-                // Futura navegação para detalhes, caso queira implementar
-              }} 
+              onPress={() => abrirDetalhe(item)}
             />
           ))
         )}
       </ScrollView>
+
+      {/* Modal Reutilizável de Detalhes */}
+      <ModalDetalhesAtendimento
+        visible={modalVisivel}
+        atendimento={atendimentoSelecionado}
+        permiteAcoes={true}
+        processando={processandoAcao}
+        onClose={() => setModalVisivel(false)}
+        onAceitar={() => atualizarStatusAgendamento("CONFIRMADO")}
+        onRecusar={() => atualizarStatusAgendamento("RECUSADO_PELO_CLIENTE")}
+      />
 
       {/* Botão Novo Agendamento flutuante/fixo acima do menu */}
       <View style={styles.footerContainer}>

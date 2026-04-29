@@ -11,12 +11,15 @@ import {
   Dimensions,
   KeyboardAvoidingView,
   Platform,
+  Alert,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import { FontAwesome } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { COLORS, FONTS, SPACING, RADIUS } from "../constants/theme";
 import { OPCOES_SEXO, OPCOES_PORTE } from "../constants/data";
+import { enviarRequisicaoHttp } from "../api/compartilhado/clienteHttp";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -173,6 +176,28 @@ export default function PerfilScreen({ navigation, route }) {
     setEditPetVisivel(false);
   }
 
+  async function realizarLogout() {
+    try {
+      // Faz a requisição para invalidar o token no backend
+      await enviarRequisicaoHttp({
+        metodo: "POST",
+        endpoint: "/usuarios/logout"
+      });
+
+      // Apaga todos os dados armazenados localmente
+      await AsyncStorage.clear();
+
+      // Redireciona para a tela de Login e limpa o histórico de navegação
+      navigation.reset({
+        index: 0,
+        routes: [{ name: "Login" }],
+      });
+    } catch (erro) {
+      console.error("Erro ao realizar logout:", erro);
+      Alert.alert("Erro", "Não foi possível realizar o logout. Tente novamente.");
+    }
+  }
+
   return (
     <View style={[styles.tela, { paddingTop: insets.top }]}>
       <StatusBar style="dark" />
@@ -186,7 +211,14 @@ export default function PerfilScreen({ navigation, route }) {
           >
             <Text style={styles.pencilEmoji}>✏️</Text>
           </TouchableOpacity>
-          <FontAwesome name="gear" size={26} color={COLORS.primaryMedium} />
+          
+          {/* NOVO ÍCONE DE LOGOUT E AÇÃO DE CLIQUE */}
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={realizarLogout}
+          >
+            <FontAwesome name="sign-out" size={26} color={COLORS.primaryMedium} />
+          </TouchableOpacity>
         </View>
       </View>
 

@@ -42,7 +42,7 @@ export default function HomeScreen({ route, navigation }) {
             <ServiceCard 
               key={s.key} 
               servico={s} 
-              onPress={(id) => navigation.navigate("AgendaTab", { servicoInicial: id })}
+              onPress={(id) => navigation.navigate("NovoAgendamentoTab", { servicoInicial: id })}
             />
           ))}
         </View>

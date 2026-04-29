@@ -39,7 +39,11 @@ export default function HomeScreen({ route, navigation }) {
         {/* Serviços */}
         <View style={styles.servicosRow}>
           {SERVICOS.map((s) => (
-            <ServiceCard key={s.key} servico={s} />
+            <ServiceCard 
+              key={s.key} 
+              servico={s} 
+              onPress={(id) => navigation.navigate("AgendaTab", { servicoInicial: id })}
+            />
           ))}
         </View>
 

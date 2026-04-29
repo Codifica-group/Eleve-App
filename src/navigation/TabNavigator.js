@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import HomeScreen from "../screens/HomeScreen";
 import HistoricoScreen from "../screens/HistoricoScreen";
 import PerfilScreen from "../screens/PerfilScreen";
+import AgendaScreen from "../screens/AgendaScreen";
 
 import { ABAS } from "../constants/data";
 import { COLORS } from "../constants/theme";
@@ -63,7 +64,11 @@ export default function TabNavigator({ route }) {
         component={HomeScreen}
         initialParams={parentParams}
       />
-      <Tab.Screen name="AgendaTab" component={PlaceholderScreen} />
+      <Tab.Screen 
+        name="AgendaTab" 
+        component={AgendaScreen} 
+        initialParams={parentParams} 
+      />
       <Tab.Screen
         name="HistoricoTab"
         component={HistoricoScreen}

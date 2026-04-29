@@ -163,6 +163,12 @@ export default function HistoricoScreen({ navigation, route }) {
             const anoAtendimento = dataAtendimento.getFullYear();
             const mesAtendimento = dataAtendimento.getMonth();
             const diaAtendimento = dataAtendimento.getDate();
+            const horaAtendimento = dataAtendimento.getHours();
+            const minutoAtendimento = dataAtendimento.getMinutes();
+
+            const dataFimAtendimento = new Date(item.dataHoraFim);
+            const horaFimAtendimento = dataFimAtendimento.getHours();
+            const minutoFimAtendimento = dataFimAtendimento.getMinutes();
             
             const diaSemana = getDiaSemana(anoAtendimento, mesAtendimento, diaAtendimento);
             
@@ -195,10 +201,11 @@ export default function HistoricoScreen({ navigation, route }) {
                   <Text style={styles.cardDiaNumero}>
                     {String(diaAtendimento).padStart(2, "0")}
                   </Text>
+                  <Text style={styles.cardValor}>{String(horaAtendimento).padStart(2, "0")}:{String(minutoAtendimento).padStart(2, "0")} - {String(horaFimAtendimento).padStart(2, "0")}:{String(minutoFimAtendimento).padStart(2, "0")}</Text>
                 </View>
                 <View style={styles.cardInfo}>
                   <Text style={styles.cardServico} numberOfLines={1}>
-                    {nomesServicos}
+                    {item.pet?.nome || "Pet não informado"} - {nomesServicos}
                   </Text>
                   <Text style={styles.cardValor}>
                     R$ {item.valorTotal.toFixed(2).replace('.', ',')}
@@ -224,6 +231,7 @@ export default function HistoricoScreen({ navigation, route }) {
           <View style={styles.modalContent}>
             {atendimentoSelecionado && (() => {
               const dataModal = new Date(atendimentoSelecionado.dataHoraInicio);
+              const dataFimModal = new Date(atendimentoSelecionado.dataHoraFim);
               const nomesServicosModal = atendimentoSelecionado.servicos 
                 ? atendimentoSelecionado.servicos.map(s => s.nome).join(", ") 
                 : "Não informado";
@@ -236,7 +244,7 @@ export default function HistoricoScreen({ navigation, route }) {
                   <Text style={styles.modalLabel}>Data e Hora</Text>
                   <Text style={styles.modalValor}>
                     {String(dataModal.getDate()).padStart(2, "0")} de{" "}
-                    {getNomeMes(dataModal.getMonth())} de {dataModal.getFullYear()} às {String(dataModal.getHours()).padStart(2, "0")}:{String(dataModal.getMinutes()).padStart(2, "0")}
+                    {getNomeMes(dataModal.getMonth())} de {dataModal.getFullYear()} às {String(dataModal.getHours()).padStart(2, "0")}:{String(dataModal.getMinutes()).padStart(2, "0")} - {String(dataFimModal.getHours()).padStart(2, "0")}:{String(dataFimModal.getMinutes()).padStart(2, "0")}
                   </Text>
                   
                   <Text style={styles.modalLabel}>Pet</Text>

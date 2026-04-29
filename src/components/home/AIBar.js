@@ -126,7 +126,7 @@ export default function AIBar() {
     <>
       <Pressable style={styles.container} onPress={() => setModalVisible(true)}>
         <Text style={styles.input}>
-          Pergunte à Dr. SophIA
+          Pergunte à Dra. SophIA
         </Text>
       </Pressable>
 
@@ -179,7 +179,7 @@ export default function AIBar() {
             {isLoading ? (
               <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color={COLORS.primary} />
-                <Text style={styles.loadingText}>A Dr. SophIA está analisando sua pergunta...</Text>
+                <Text style={styles.loadingText}>A Dra. SophIA está analisando sua pergunta...</Text>
               </View>
             ) : (
               <ScrollView style={styles.responseScroll} showsVerticalScrollIndicator={false}>

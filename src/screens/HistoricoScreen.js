@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -6,11 +6,16 @@ import {
   ScrollView,
   Modal,
   StyleSheet,
+  ActivityIndicator
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import { FontAwesome } from "@expo/vector-icons";
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
 import { COLORS, FONTS, SPACING } from "../constants/theme";
+import { montarUrlBackend } from "../api/compartilhado/proxyBackend";
+import { obterOuSincronizarClienteId } from "../api/clientes/sincronizarCliente";
 
 function getNomeMes(mes) {
   const date = new Date(2026, mes, 1);
@@ -26,63 +31,90 @@ function getDiaSemana(ano, mes, dia) {
     .toUpperCase();
 }
 
-const HISTORICO_MOCK = {
-  "2026-01": [
-    { dia: 3, servico: "Banho e Hidratação", valor: "R$ 100,00" },
-    { dia: 11, servico: "Banho e Tosa", valor: "R$ 150,00" },
-    { dia: 18, servico: "Banho", valor: "R$ 80,00" },
-    { dia: 25, servico: "Banho e Tosa", valor: "R$ 150,00" },
-  ],
-  "2026-02": [
-    { dia: 5, servico: "Banho", valor: "R$ 80,00" },
-    { dia: 14, servico: "Tosa", valor: "R$ 70,00" },
-    { dia: 22, servico: "Banho e Hidratação", valor: "R$ 100,00" },
-  ],
-  "2026-03": [
-    { dia: 2, servico: "Banho e Tosa", valor: "R$ 150,00" },
-    { dia: 10, servico: "Hidratação", valor: "R$ 60,00" },
-    { dia: 17, servico: "Banho", valor: "R$ 80,00" },
-    { dia: 24, servico: "Banho e Tosa", valor: "R$ 150,00" },
-    { dia: 30, servico: "Banho e Hidratação", valor: "R$ 100,00" },
-  ],
-};
-
-function formatMesKey(ano, mes) {
-  return `${ano}-${String(mes + 1).padStart(2, "0")}`;
+function formatarDataIsoString(data) {
+  return data.toISOString().split("T")[0];
 }
 
 export default function HistoricoScreen({ navigation, route }) {
   const insets = useSafeAreaInsets();
   const hoje = new Date();
 
-  const [mesAtual, setMesAtual] = useState(hoje.getMonth());
-  const [anoAtual, setAnoAtual] = useState(hoje.getFullYear());
+  const [atendimentos, setAtendimentos] = useState([]);
+  const [loading, setLoading] = useState(true);
+  
+  // Paginação
+  const [paginaAtual, setPaginaAtual] = useState(0);
+  const [totalPaginas, setTotalPaginas] = useState(1);
+
+  // Modal
   const [modalVisivel, setModalVisivel] = useState(false);
-  const [diaSelecionado, setDiaSelecionado] = useState(null);
+  const [atendimentoSelecionado, setAtendimentoSelecionado] = useState(null);
 
-  const chave = formatMesKey(anoAtual, mesAtual);
-  const atendimentos = HISTORICO_MOCK[chave] || [];
+  useEffect(() => {
+    carregarAgendas();
+  }, [paginaAtual]);
 
-  function mesAnterior() {
-    if (mesAtual === 0) {
-      setMesAtual(11);
-      setAnoAtual((a) => a - 1);
-    } else {
-      setMesAtual((m) => m - 1);
+  async function carregarAgendas() {
+    setLoading(true);
+    try {
+      const clienteId = await obterOuSincronizarClienteId();
+      const token = await AsyncStorage.getItem('@eleve:token_acesso');
+
+      const dataInicio = new Date(hoje);
+      dataInicio.setFullYear(hoje.getFullYear() - 1);
+      
+      const dataFim = new Date(hoje);
+      dataFim.setFullYear(hoje.getFullYear() + 1);
+
+      const url = montarUrlBackend(`agendas/filtrar?offset=${paginaAtual}&size=10`);
+      
+      const payload = {
+        dataInicio: formatarDataIsoString(dataInicio),
+        dataFim: formatarDataIsoString(dataFim),
+        clienteId: clienteId,
+        petId: null,
+        racaId: null,
+        servicoId: []
+      };
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!response.ok) {
+        throw new Error("Erro ao buscar histórico.");
+      }
+
+      const json = await response.json();
+      setAtendimentos(json.dados || []);
+      setTotalPaginas(json.totalPaginas > 0 ? json.totalPaginas : 1);
+
+    } catch (error) {
+      console.error("Falha ao carregar agendas:", error);
+    } finally {
+      setLoading(false);
     }
   }
 
-  function mesSeguinte() {
-    if (mesAtual === 11) {
-      setMesAtual(0);
-      setAnoAtual((a) => a + 1);
-    } else {
-      setMesAtual((m) => m + 1);
+  function paginaAnterior() {
+    if (paginaAtual > 0) {
+      setPaginaAtual((p) => p - 1);
+    }
+  }
+
+  function paginaSeguinte() {
+    if (paginaAtual < totalPaginas - 1) {
+      setPaginaAtual((p) => p + 1);
     }
   }
 
   function abrirDetalhe(item) {
-    setDiaSelecionado(item);
+    setAtendimentoSelecionado(item);
     setModalVisivel(true);
   }
 
@@ -96,39 +128,47 @@ export default function HistoricoScreen({ navigation, route }) {
         <FontAwesome name="gear" size={26} color={COLORS.primaryMedium} />
       </View>
 
-      {/* Seletor de mês */}
-      <View style={styles.mesSelector}>
-        <TouchableOpacity onPress={mesAnterior} hitSlop={12}>
-          <Text style={styles.seta}>{"<"}</Text>
+      <View style={styles.paginacaoContainer}>
+        <TouchableOpacity onPress={paginaAnterior} hitSlop={12} disabled={paginaAtual === 0 || loading}>
+          <Text style={[styles.seta, (paginaAtual === 0 || loading) && styles.setaDesabilitada]}>
+            {"<"}
+          </Text>
         </TouchableOpacity>
-        <Text style={styles.mesTexto}>
-          {getNomeMes(mesAtual)} - {anoAtual}
+        <Text style={styles.paginacaoTexto}>
+          Página {paginaAtual + 1} de {totalPaginas}
         </Text>
-        <TouchableOpacity onPress={mesSeguinte} hitSlop={12}>
-          <Text style={styles.seta}>{">"}</Text>
+        <TouchableOpacity onPress={paginaSeguinte} hitSlop={12} disabled={paginaAtual >= totalPaginas - 1 || loading}>
+          <Text style={[styles.seta, (paginaAtual >= totalPaginas - 1 || loading) && styles.setaDesabilitada]}>
+            {">"}
+          </Text>
         </TouchableOpacity>
       </View>
 
-      {/* Lista de atendimentos */}
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {atendimentos.length === 0 ? (
+        {loading ? (
+          <ActivityIndicator size="large" color={COLORS.primary} style={{ marginTop: 40 }} />
+        ) : atendimentos.length === 0 ? (
           <View style={styles.vazioContainer}>
             <Text style={styles.vazioTexto}>
-              Nenhum atendimento neste mês.
+              Nenhum atendimento encontrado.
             </Text>
           </View>
         ) : (
           atendimentos.map((item, index) => {
-            const diaSemana = getDiaSemana(anoAtual, mesAtual, item.dia);
-            const dataAtendimento = new Date(anoAtual, mesAtual, item.dia);
-            const diffMs = dataAtendimento - hoje;
+            const dataAtendimento = new Date(item.dataHoraInicio);
+            const anoAtendimento = dataAtendimento.getFullYear();
+            const mesAtendimento = dataAtendimento.getMonth();
+            const diaAtendimento = dataAtendimento.getDate();
+            
+            const diaSemana = getDiaSemana(anoAtendimento, mesAtendimento, diaAtendimento);
+            
             const diffMeses =
-              (hoje.getFullYear() - anoAtual) * 12 +
-              (hoje.getMonth() - mesAtual);
+              (hoje.getFullYear() - anoAtendimento) * 12 +
+              (hoje.getMonth() - mesAtendimento);
 
             // Verde = futuro, Vermelho = 2+ meses atrás, padrão = accent/primary
             let corCard = COLORS.accent;
@@ -136,14 +176,16 @@ export default function HistoricoScreen({ navigation, route }) {
             if (dataAtendimento > hoje) {
               corCard = "#4CAF50";
               corDia = "#388E3C";
-            } else if (diffMeses >= 2 || (diffMeses === 1 && hoje.getDate() >= item.dia)) {
+            } else if (diffMeses >= 2 || (diffMeses === 1 && hoje.getDate() >= diaAtendimento)) {
               corCard = "#E57373";
               corDia = "#C62828";
             }
 
+            const nomesServicos = item.servicos ? item.servicos.map(s => s.nome).join(" e ") : "Serviço";
+
             return (
               <TouchableOpacity
-                key={index}
+                key={item.id || index}
                 style={[styles.card, { backgroundColor: corCard }]}
                 activeOpacity={0.8}
                 onPress={() => abrirDetalhe(item)}
@@ -151,12 +193,16 @@ export default function HistoricoScreen({ navigation, route }) {
                 <View style={[styles.cardDia, { backgroundColor: corDia }]}>
                   <Text style={styles.cardDiaSemana}>{diaSemana}</Text>
                   <Text style={styles.cardDiaNumero}>
-                    {String(item.dia).padStart(2, "0")}
+                    {String(diaAtendimento).padStart(2, "0")}
                   </Text>
                 </View>
                 <View style={styles.cardInfo}>
-                  <Text style={styles.cardServico}>{item.servico}</Text>
-                  <Text style={styles.cardValor}>{item.valor}</Text>
+                  <Text style={styles.cardServico} numberOfLines={1}>
+                    {nomesServicos}
+                  </Text>
+                  <Text style={styles.cardValor}>
+                    R$ {item.valorTotal.toFixed(2).replace('.', ',')}
+                  </Text>
                 </View>
               </TouchableOpacity>
             );
@@ -164,7 +210,6 @@ export default function HistoricoScreen({ navigation, route }) {
         )}
       </ScrollView>
 
-      {/* Modal de detalhe */}
       <Modal
         visible={modalVisivel}
         transparent
@@ -177,31 +222,47 @@ export default function HistoricoScreen({ navigation, route }) {
           onPress={() => setModalVisivel(false)}
         >
           <View style={styles.modalContent}>
-            {diaSelecionado && (
-              <>
-                <Text style={styles.modalTitulo}>Detalhes do Atendimento</Text>
-                <View style={styles.modalDivisor} />
-                <Text style={styles.modalLabel}>Data</Text>
-                <Text style={styles.modalValor}>
-                  {String(diaSelecionado.dia).padStart(2, "0")} de{" "}
-                  {getNomeMes(mesAtual)} de {anoAtual}
-                </Text>
-                <Text style={styles.modalLabel}>Serviço</Text>
-                <Text style={styles.modalValor}>
-                  {diaSelecionado.servico}
-                </Text>
-                <Text style={styles.modalLabel}>Valor</Text>
-                <Text style={styles.modalValor}>
-                  {diaSelecionado.valor}
-                </Text>
-                <TouchableOpacity
-                  style={styles.modalBotao}
-                  onPress={() => setModalVisivel(false)}
-                >
-                  <Text style={styles.modalBotaoTexto}>Fechar</Text>
-                </TouchableOpacity>
-              </>
-            )}
+            {atendimentoSelecionado && (() => {
+              const dataModal = new Date(atendimentoSelecionado.dataHoraInicio);
+              const nomesServicosModal = atendimentoSelecionado.servicos 
+                ? atendimentoSelecionado.servicos.map(s => s.nome).join(", ") 
+                : "Não informado";
+                
+              return (
+                <>
+                  <Text style={styles.modalTitulo}>Detalhes do Atendimento</Text>
+                  <View style={styles.modalDivisor} />
+                  
+                  <Text style={styles.modalLabel}>Data e Hora</Text>
+                  <Text style={styles.modalValor}>
+                    {String(dataModal.getDate()).padStart(2, "0")} de{" "}
+                    {getNomeMes(dataModal.getMonth())} de {dataModal.getFullYear()} às {String(dataModal.getHours()).padStart(2, "0")}:{String(dataModal.getMinutes()).padStart(2, "0")}
+                  </Text>
+                  
+                  <Text style={styles.modalLabel}>Pet</Text>
+                  <Text style={styles.modalValor}>
+                    {atendimentoSelecionado.pet?.nome || "Não informado"}
+                  </Text>
+                  
+                  <Text style={styles.modalLabel}>Serviços</Text>
+                  <Text style={styles.modalValor}>
+                    {nomesServicosModal}
+                  </Text>
+                  
+                  <Text style={styles.modalLabel}>Valor Total</Text>
+                  <Text style={styles.modalValor}>
+                    R$ {atendimentoSelecionado.valorTotal.toFixed(2).replace('.', ',')}
+                  </Text>
+                  
+                  <TouchableOpacity
+                    style={styles.modalBotao}
+                    onPress={() => setModalVisivel(false)}
+                  >
+                    <Text style={styles.modalBotaoTexto}>Fechar</Text>
+                  </TouchableOpacity>
+                </>
+              );
+            })()}
           </View>
         </TouchableOpacity>
       </Modal>
@@ -227,7 +288,7 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.extraBold,
     color: COLORS.primaryDark,
   },
-  mesSelector: {
+  paginacaoContainer: {
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
@@ -240,7 +301,11 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.bold,
     paddingHorizontal: 8,
   },
-  mesTexto: {
+  setaDesabilitada: {
+    color: COLORS.gray,
+    opacity: 0.5,
+  },
+  paginacaoTexto: {
     fontSize: 17,
     fontFamily: FONTS.bold,
     color: COLORS.dark,
@@ -312,7 +377,6 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.regular,
     color: COLORS.white,
   },
-  // Modal
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.5)",

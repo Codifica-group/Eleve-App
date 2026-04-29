@@ -125,7 +125,7 @@ export default function AIBar() {
   return (
     <>
       <Pressable style={styles.container} onPress={() => setModalVisible(true)}>
-        <Text style={styles.input}>
+        <Text style={styles.input} style={{ fontWeight: "bold", color: COLORS.white }}>
           Pergunte à Dra. SophIA
         </Text>
       </Pressable>

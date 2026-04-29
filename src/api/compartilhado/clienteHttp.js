@@ -133,7 +133,7 @@ export async function enviarRequisicaoHttp({
 
     if (erro?.name === "AbortError") {
       throw new ErroTimeout(
-        `Não foi possível conectar ao servidor (${url}). Se estiver no emulador Android, use 10.0.2.2. Se estiver no celular, use o IP da sua máquina na rede.`
+        `Não foi possível conectar ao servidor (${urlFinal}). Se estiver no emulador Android, use 10.0.2.2. Se estiver no celular, use o IP da sua máquina na rede.`
       );
     }
 

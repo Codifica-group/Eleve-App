@@ -5,8 +5,7 @@ import {
   TouchableOpacity,
   ScrollView,
   StyleSheet,
-  ActivityIndicator,
-  Alert
+  ActivityIndicator
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
@@ -17,6 +16,7 @@ import { montarUrlBackend } from "../api/compartilhado/proxyBackend";
 import { obterOuSincronizarClienteId } from "../api/clientes/sincronizarCliente";
 import AgendaCard from "../components/agenda/AgendaCard";
 import ModalDetalhesAtendimento from "../components/agenda/ModalDetalhesAtendimento";
+import FeedbackManager from "../utils/FeedbackManager";
 
 export default function AgendaScreen({ navigation }) {
   const insets = useSafeAreaInsets();
@@ -101,10 +101,14 @@ export default function AgendaScreen({ navigation }) {
       }
 
       setModalVisivel(false);
+      const feedbackMessage = novoStatus === "CONFIRMADO" 
+        ? "Agendamento confirmado com sucesso!" 
+        : "Agendamento recusado!";
+      FeedbackManager.success(feedbackMessage);
       carregarAgenda();
     } catch (error) {
       console.error("Falha ao atualizar status da agenda:", error);
-      Alert.alert("Erro", "Não foi possível alterar o status do agendamento.");
+      FeedbackManager.error("Não foi possível alterar o status do agendamento.");
     } finally {
       setProcessandoAcao(false);
     }

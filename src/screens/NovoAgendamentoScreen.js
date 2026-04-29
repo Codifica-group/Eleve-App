@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert, Platform, TextInput } from "react-native";
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Platform, TextInput } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import DateTimePicker from "@react-native-community/datetimepicker";
@@ -10,6 +10,7 @@ import ServiceAgendaCard from "../components/agenda/ServiceAgendaCard";
 import { SERVICOS } from "../constants/data";
 import { obterOuSincronizarClienteId } from "../api/clientes/sincronizarCliente";
 import { enviarRequisicaoHttp } from "../api/compartilhado/clienteHttp";
+import FeedbackManager from "../utils/FeedbackManager";
 
 export default function NovoAgendamentoScreen({ route, navigation }) {
   const insets = useSafeAreaInsets();
@@ -54,15 +55,36 @@ export default function NovoAgendamentoScreen({ route, navigation }) {
     return null;
   };
 
+  const [dateText, setDateText] = useState(formatDate(date));
+
   useEffect(() => {
-    carregarPets();
-  }, []);
+    const unsubscribe = navigation.addListener("focus", () => {
+      // Limpa os campos e reinicia a data para hoje
+      const resetDate = new Date();
+      resetDate.setHours(0, 0, 0, 0);
+      
+      setDate(resetDate);
+      setDateText(formatDate(resetDate));
+      setSelectedTime("");
+      setMensagemErroHorario("");
+
+      // Lida com o parâmetro de serviço inicial e o limpa para as próximas visitas
+      if (route?.params?.servicoInicial) {
+        setSelectedServices([route.params.servicoInicial]);
+        navigation.setParams({ servicoInicial: undefined });
+      } else {
+        setSelectedServices([]);
+      }
+
+      carregarPets();
+    });
+    
+    return unsubscribe;
+  }, [navigation, route?.params?.servicoInicial]);
 
   useEffect(() => {
     carregarDisponibilidade(date);
   }, [date]);
-
-  const [dateText, setDateText] = useState(formatDate(date));
 
   const carregarPets = async () => {
     try {
@@ -141,7 +163,7 @@ export default function NovoAgendamentoScreen({ route, navigation }) {
 
   const agendar = async () => {
     if (!selectedPet || selectedServices.length === 0 || !selectedTime) {
-      Alert.alert("Aviso", "Preencha todas as informações (Pet, Serviço e Horário) para agendar.");
+      FeedbackManager.error("Preencha todas as informações (Pet, Serviço e Horário) para agendar.");
       return;
     }
 
@@ -165,11 +187,21 @@ export default function NovoAgendamentoScreen({ route, navigation }) {
         corpoJson: payload
       });
 
-      Alert.alert("Sucesso!", "Agendamento solicitado com sucesso.");
+      FeedbackManager.success("Agendamento solicitado com sucesso.");
+      
+      // Limpa os campos logo após o sucesso
+      const resetDate = new Date();
+      resetDate.setHours(0, 0, 0, 0);
+      setDate(resetDate);
+      setDateText(formatDate(resetDate));
+      setSelectedServices([]);
+      setSelectedTime("");
+      if (pets.length > 0) setSelectedPet(pets[0].id);
+
       navigation.navigate("HomeTab");
     } catch (error) {
       console.log("Erro ao agendar:", error);
-      Alert.alert("Erro", "Falha ao solicitar agendamento.");
+      FeedbackManager.error("Falha ao solicitar agendamento.");
     }
   };
 

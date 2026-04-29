@@ -1,5 +1,4 @@
 import { enviarRequisicaoHttp } from "../compartilhado/clienteHttp";
-import { montarUrlBackend } from "../compartilhado/proxyBackend";
 
 function montarHeadersAutorizacao(tokenAcesso) {
   if (!tokenAcesso) return {};
@@ -17,7 +16,6 @@ export async function cadastrarCliente({
   complemento,
   tokenAcesso,
 }) {
-  const url = montarUrlBackend("/clientes");
   const headers = montarHeadersAutorizacao(tokenAcesso);
 
   const corpoJson = {
@@ -33,11 +31,10 @@ export async function cadastrarCliente({
 
   const resposta = await enviarRequisicaoHttp({
     metodo: "POST",
-    url,
+    endpoint: "/clientes",
     headers,
     corpoJson,
   });
 
   return resposta;
 }
-

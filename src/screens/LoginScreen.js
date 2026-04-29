@@ -9,17 +9,6 @@ import { logarUsuario } from "../api/usuarios/logarUsuario";
 import { obterMensagemAmigavel } from "../api/compartilhado/errosApi";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-function inferirNomeUsuario(email) {
-  const parte = String(email || "").split("@")[0] || "";
-  const sanitizado = parte.replace(/[._-]+/g, " ").trim();
-  if (!sanitizado) return "Usuário";
-
-  return sanitizado
-    .split(/\s+/)
-    .map((p) => (p ? p[0].toUpperCase() + p.slice(1).toLowerCase() : p))
-    .join(" ");
-}
-
 export default function LoginScreen({ navigation, route }) {
   const emailInicial = route?.params?.email || "";
 
@@ -78,20 +67,18 @@ export default function LoginScreen({ navigation, route }) {
 
     try {
       setCarregando(true);
-      const { token } = await logarUsuario({
+      const response = await logarUsuario({
         email: campos.email,
         senha: campos.senha,
       });
 
-      if (!token) {
+      if (!response.token) {
         throw new Error("Não foi possível autenticar. Tente novamente.");
       }
 
-      const nomeUsuario = inferirNomeUsuario(campos.email);
-
-      await AsyncStorage.setItem('@eleve:token_acesso', token);
-      await AsyncStorage.setItem('@eleve:email_usuario', campos.email);
-      await AsyncStorage.setItem('@eleve:nome_usuario', nomeUsuario);
+      await AsyncStorage.setItem('@eleve:token_acesso', response.token);
+      await AsyncStorage.setItem('@eleve:email_usuario', response.usuario?.email);
+      await AsyncStorage.setItem('@eleve:nome_usuario', response.usuario?.nome);
 
       navigation.reset({
         index: 0,
@@ -99,9 +86,9 @@ export default function LoginScreen({ navigation, route }) {
           {
             name: "Home",
             params: {
-              tokenAcesso: token,
+              tokenAcesso: response.token,
               email: campos.email,
-              nomeUsuario,
+              nomeUsuario: response.usuario?.nome,
             },
           },
         ],

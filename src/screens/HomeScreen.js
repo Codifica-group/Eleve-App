@@ -9,6 +9,10 @@ import ServiceCard from "../components/home/ServiceCard";
 import AIBar from "../components/home/AIBar";
 import MessageCard from "../components/home/MessageCard";
 import PromoCarousel from "../components/home/PromoCarousel";
+import AgendaCard from "../components/agenda/AgendaCard";
+
+import { montarUrlBackend } from "../api/compartilhado/proxyBackend";
+import { obterOuSincronizarClienteId } from "../api/clientes/sincronizarCliente";
 
 import { SERVICOS, MENSAGENS, PROMOS } from "../constants/data";
 import { COLORS, FONTS, SPACING } from "../constants/theme";
@@ -21,6 +25,8 @@ export default function HomeScreen({ route, navigation }) {
   const [mensagem] = useState(
     () => MENSAGENS[Math.floor(Math.random() * MENSAGENS.length)]
   );
+  
+  const [proximoAgendamento, setProximoAgendamento] = useState(null);
 
   useEffect(() => {
     async function carregarNomeUsuario() {
@@ -33,6 +39,68 @@ export default function HomeScreen({ route, navigation }) {
       carregarNomeUsuario();
     }
   }, [params.nomeUsuario]);
+
+  useEffect(() => {
+    const unsubscribe = navigation.addListener("focus", () => {
+      carregarAgendaHomeScreen();
+    });
+    return unsubscribe;
+  }, [navigation]);
+
+  async function carregarAgendaHomeScreen() {
+    try {
+      const clienteId = await obterOuSincronizarClienteId();
+      const token = await AsyncStorage.getItem("@eleve:token_acesso");
+      
+      const url = montarUrlBackend(`solicitacoes-agenda/chat/${clienteId || 1}`);
+
+      const response = await fetch(url, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Erro ao buscar solicitações da agenda na Home.");
+      }
+
+      const dados = await response.json();
+
+      if (dados && dados.length > 0) {
+        const agora = new Date();
+
+        const agendamentosFuturos = dados.filter(item => new Date(item.dataHoraInicio) > agora);
+
+        const prioridades = {
+          "AGUARDANDO_RESPOSTA_PETSHOP": 3,
+          "ACEITO_PELO_PETSHOP": 2,
+          "CONFIRMADO": 1
+        };
+
+        const agendamentosRelevantes = agendamentosFuturos.filter(item => prioridades[item.status]);
+
+        if (agendamentosRelevantes.length > 0) {
+          agendamentosRelevantes.sort((a, b) => {
+            if (prioridades[a.status] !== prioridades[b.status]) {
+              return prioridades[a.status] - prioridades[b.status];
+            }
+            return new Date(a.dataHoraInicio) - new Date(b.dataHoraInicio);
+          });
+
+          setProximoAgendamento(agendamentosRelevantes[0]);
+        } else {
+          setProximoAgendamento(null);
+        }
+      } else {
+        setProximoAgendamento(null);
+      }
+    } catch (error) {
+      console.error("Falha ao carregar agenda na HomeScreen:", error);
+      setProximoAgendamento(null);
+    }
+  }
   
   return (
     <View style={[styles.tela, { paddingTop: insets.top }]}>
@@ -60,10 +128,17 @@ export default function HomeScreen({ route, navigation }) {
           ))}
         </View>
 
-        {/* Instanciamento limpo do AIBar */}
         <AIBar />
 
-        <MessageCard mensagem={mensagem} />
+        {/* Renderização Condicional: AgendaCard se houver prioridade, senão MessageCard */}
+        {proximoAgendamento ? (
+          <AgendaCard 
+            item={proximoAgendamento} 
+            onPress={() => navigation.navigate("AgendaTab")}
+          />
+        ) : (
+          <MessageCard mensagem={mensagem} />
+        )}
 
         <PromoCarousel data={PROMOS} />
       </ScrollView>

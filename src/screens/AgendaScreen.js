@@ -1,7 +1,9 @@
-import React, { useState, useEffect } from "react";
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert } from "react-native";
+import React, { useState, useEffect, useRef } from "react";
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert, Platform, TextInput } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
+import DateTimePicker from "@react-native-community/datetimepicker";
+import { FontAwesome } from "@expo/vector-icons";
 import { COLORS, FONTS, SPACING, RADIUS } from "../constants/theme";
 import PetCarousel from "../components/pets/PetCarousel";
 import ServiceCard from "../components/home/ServiceCard";
@@ -15,19 +17,52 @@ export default function AgendaScreen({ route, navigation }) {
 
   const [pets, setPets] = useState([]);
   const [selectedPet, setSelectedPet] = useState(null);
-  
-  const [selectedServices, setSelectedServices] = useState(
-    servicoInicial ? [servicoInicial] : []
-  );
+  const [selectedServices, setSelectedServices] = useState(servicoInicial ? [servicoInicial] : []);
 
-  const [disponibilidade, setDisponibilidade] = useState([]);
-  const [selectedDate, setSelectedDate] = useState("");
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const [date, setDate] = useState(today);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [horarios, setHorarios] = useState([]);
   const [selectedTime, setSelectedTime] = useState("");
+  const [mensagemErroHorario, setMensagemErroHorario] = useState("");
+
+  const [isAtStart, setIsAtStart] = useState(true);
+  const [isAtEnd, setIsAtEnd] = useState(false);
+
+  const formatDate = (d) => {
+    if (!d) return "";
+    return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  };
+
+  const parseDate = (text) => {
+    if (!text || text.length !== 10) return null;
+    const parts = text.split('/');
+    if (parts.length !== 3) return null;
+
+    const day = parseInt(parts[0], 10);
+    const month = parseInt(parts[1], 10) - 1;
+    const year = parseInt(parts[2], 10);
+
+    if (isNaN(day) || isNaN(month) || isNaN(year) || year < 2000) return null;
+
+    const newDate = new Date(year, month, day);
+    if (newDate.getFullYear() === year && newDate.getMonth() === month && newDate.getDate() === day) {
+      return newDate;
+    }
+    return null;
+  };
 
   useEffect(() => {
     carregarPets();
-    carregarDisponibilidade();
   }, []);
+
+  useEffect(() => {
+    carregarDisponibilidade(date);
+  }, [date]);
+
+  const [dateText, setDateText] = useState(formatDate(date));
 
   const carregarPets = async () => {
     try {
@@ -43,18 +78,52 @@ export default function AgendaScreen({ route, navigation }) {
     }
   };
 
-  const carregarDisponibilidade = async () => {
+  const carregarDisponibilidade = async (dataSelecionada) => {
+    setHorarios([]);
+    setSelectedTime("");
+    setMensagemErroHorario("");
+
+    const dataFormatada = dataSelecionada.toISOString().split("T")[0];
     try {
       const data = await enviarRequisicaoHttp({
         metodo: "GET",
-        endpoint: "/agendas/disponibilidade?inicio=2026-04-29T00:00:00&fim=2026-04-29T23:59:59"
+        endpoint: `/agendas/disponibilidade?inicio=${dataFormatada}T00:00:00&fim=${dataFormatada}T23:59:59`
       });
-      setDisponibilidade(data || []);
-      if (data && data.length > 0) {
-        setSelectedDate(data[0].dia);
+
+      if (data && data.length > 0 && data[0].horarios.length > 0) {
+        setHorarios(data[0].horarios);
+        setIsAtStart(true);
+        setIsAtEnd(data[0].horarios.length <= 4);
+      } else {
+        setMensagemErroHorario("Nenhum horário disponível para esta data.");
       }
     } catch (error) {
       console.log("Erro ao buscar disponibilidades:", error);
+      setMensagemErroHorario("Erro ao procurar horários. Tente novamente.");
+    }
+  };
+
+  const onChangeDate = (event, selectedDate) => {
+    setShowDatePicker(Platform.OS === 'ios');
+    if (selectedDate) {
+      const newDate = new Date(selectedDate);
+      newDate.setHours(0,0,0,0);
+      setDate(newDate);
+      setDateText(formatDate(newDate));
+    }
+  };
+
+  const handleDateTextChange = (text) => {
+    let formattedText = text.replace(/\D/g, '');
+    if (formattedText.length > 2) formattedText = `${formattedText.slice(0, 2)}/${formattedText.slice(2)}`;
+    if (formattedText.length > 5) formattedText = `${formattedText.slice(0, 5)}/${formattedText.slice(5, 9)}`;
+    setDateText(formattedText);
+
+    if (formattedText.length === 10) {
+      const parsed = parseDate(formattedText);
+      if (parsed && parsed >= today) {
+        setDate(parsed);
+      }
     }
   };
 
@@ -64,20 +133,27 @@ export default function AgendaScreen({ route, navigation }) {
     );
   };
 
+  const handleScroll = (event) => {
+    const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
+    setIsAtStart(contentOffset.x <= 0);
+    setIsAtEnd(layoutMeasurement.width + contentOffset.x >= contentSize.width - 20);
+  };
+
   const agendar = async () => {
-    if (!selectedPet || selectedServices.length === 0 || !selectedDate || !selectedTime) {
-      Alert.alert("Aviso", "Preencha todas as informações para agendar.");
+    if (!selectedPet || selectedServices.length === 0 || !selectedTime) {
+      Alert.alert("Aviso", "Preencha todas as informações (Pet, Serviço e Horário) para agendar.");
       return;
     }
 
     try {
       const clienteId = await obterOuSincronizarClienteId();
+      const dataFormatada = date.toISOString().split("T")[0];
       const payload = {
         chatId: clienteId,
         petId: selectedPet,
         servicos: selectedServices.map((id) => ({ id, valor: 0.0 })),
         valorDeslocamento: 0.0,
-        dataHoraInicio: `${selectedDate}T${selectedTime}`,
+        dataHoraInicio: `${dataFormatada}T${selectedTime}`,
         dataHoraFim: "",
         dataHoraSolicitacao: new Date().toISOString(),
         status: "AGUARDANDO_RESPOSTA_PETSHOP",
@@ -97,69 +173,96 @@ export default function AgendaScreen({ route, navigation }) {
     }
   };
 
-  const horariosDoDiaSelecionado = disponibilidade.find((d) => d.dia === selectedDate)?.horarios || [];
-
   return (
     <View style={[styles.tela, { paddingTop: insets.top }]}>
       <StatusBar style="dark" />
       <ScrollView showsVerticalScrollIndicator={false}>
-        <Text style={styles.titulo}>Agendamento</Text>
+        <Text style={styles.titulo}>Novo Agendamento</Text>
 
-        {/* 1. Carrossel de Pets */}
         <Text style={styles.sectionTitle}>1. Escolha o Pet</Text>
         <PetCarousel pets={pets} selectedPetId={selectedPet} onSelectPet={setSelectedPet} />
 
-        {/* 2. Serviços (Checkbox com grayscale) */}
         <Text style={styles.sectionTitle}>2. Selecione os Serviços</Text>
         <View style={styles.servicosRow}>
-          {SERVICOS.slice(0, 3).map((s) => ( // banho(1), tosa(2), hidratação(3)
+          {SERVICOS.slice(0, 3).map((s) => (
             <ServiceCard
-              key={s.id || s.key}
+              key={s.key}
               servico={s}
               isSelected={selectedServices.includes(s.id)}
-              onPress={() => toggleService(s.id)}
+              onPress={toggleService}
             />
           ))}
         </View>
 
-        {/* 3. Data e Hora */}
         <Text style={styles.sectionTitle}>3. Escolha a Data e Horário</Text>
         <View style={styles.pickerContainer}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.dateScroll}>
-            {disponibilidade.map((disp) => (
-              <TouchableOpacity
-                key={disp.dia}
-                style={[styles.timeChip, selectedDate === disp.dia && styles.timeChipSelected]}
-                onPress={() => {
-                  setSelectedDate(disp.dia);
-                  setSelectedTime("");
-                }}
-              >
-                <Text style={[styles.timeChipText, selectedDate === disp.dia && styles.timeChipTextSelected]}>
-                  {disp.diaSemana.split("-")[0]} ({disp.dia.split("-").slice(1).reverse().join("/")})
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
+          
+          <View style={styles.dateInputContainer}>
+            <TextInput
+              style={styles.dateInput}
+              value={dateText}
+              onChangeText={handleDateTextChange}
+              placeholder="DD/MM/AAAA"
+              keyboardType="numeric"
+              maxLength={10}
+            />
+            <TouchableOpacity style={styles.calendarIcon} onPress={() => setShowDatePicker(true)}>
+              <FontAwesome name="calendar" size={24} color={COLORS.primaryDark} />
+            </TouchableOpacity>
+          </View>
 
-          {selectedDate !== "" && (
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.dateScroll}>
-              {horariosDoDiaSelecionado.map((hora) => (
-                <TouchableOpacity
-                  key={hora}
-                  style={[styles.timeChip, selectedTime === hora && styles.timeChipSelected]}
-                  onPress={() => setSelectedTime(hora)}
-                >
-                  <Text style={[styles.timeChipText, selectedTime === hora && styles.timeChipTextSelected]}>
-                    {hora.substring(0, 5)}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
+          {showDatePicker && (
+            <DateTimePicker
+              value={date}
+              mode="date"
+              display="default"
+              onChange={onChangeDate}
+              minimumDate={today}
+            />
           )}
+
+          {/* Área dos Horários e Tratamento de Erros */}
+          <View style={styles.horariosContainer}>
+            {mensagemErroHorario ? (
+              <Text style={styles.erroTexto}>{mensagemErroHorario}</Text>
+            ) : (
+              <View>
+                {!isAtStart && (
+                  <View style={[styles.scrollArrow, styles.scrollArrowLeft]}>
+                    <FontAwesome name="chevron-left" size={16} color={COLORS.primaryDark} />
+                  </View>
+                )}
+                
+                <ScrollView 
+                  horizontal 
+                  showsHorizontalScrollIndicator={false} 
+                  style={styles.timeScroll}
+                  onScroll={handleScroll}
+                  scrollEventThrottle={16}
+                >
+                  {horarios.map((hora) => (
+                    <TouchableOpacity
+                      key={hora}
+                      style={[styles.timeChip, selectedTime === hora && styles.timeChipSelected]}
+                      onPress={() => setSelectedTime(hora)}
+                    >
+                      <Text style={[styles.timeChipText, selectedTime === hora && styles.timeChipTextSelected]}>
+                        {hora.substring(0, 5)}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+
+                {!isAtEnd && horarios.length > 0 && (
+                  <View style={[styles.scrollArrow, styles.scrollArrowRight]}>
+                    <FontAwesome name="chevron-right" size={16} color={COLORS.primaryDark} />
+                  </View>
+                )}
+              </View>
+            )}
+          </View>
         </View>
 
-        {/* Botão Agendar */}
         <TouchableOpacity style={styles.btnAgendar} onPress={agendar}>
           <Text style={styles.btnAgendarText}>Solicitar Agendamento</Text>
         </TouchableOpacity>
@@ -174,11 +277,35 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: 16, fontFamily: FONTS.bold, color: COLORS.dark, paddingHorizontal: SPACING.lg, marginTop: 24, marginBottom: 12 },
   servicosRow: { flexDirection: "row", paddingHorizontal: SPACING.lg },
   pickerContainer: { paddingHorizontal: SPACING.lg, gap: 10 },
+  dateInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.white,
+    borderRadius: RADIUS.sm,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    paddingHorizontal: 12,
+  },
+  dateInput: {
+    flex: 1,
+    height: 50,
+    fontSize: 16,
+    fontFamily: FONTS.regular,
+    color: COLORS.dark,
+  },
+  calendarIcon: {
+    padding: 8,
+  },
+  horariosContainer: { marginTop: 10 },
   dateScroll: { flexDirection: "row", marginBottom: 10 },
   timeChip: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: RADIUS.sm, backgroundColor: COLORS.white, borderWidth: 1, borderColor: "#ddd", marginRight: 10 },
   timeChipSelected: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
   timeChipText: { fontFamily: FONTS.bold, color: COLORS.dark, fontSize: 14 },
   timeChipTextSelected: { color: COLORS.white },
+  scrollArrow: { position: "absolute", top: "50%", marginTop: -12, zIndex: 10, backgroundColor: "rgba(255,255,255,0.8)", borderRadius: 12, padding: 4 },
+  scrollArrowLeft: { left: -10 },
+  scrollArrowRight: { right: -10 },
   btnAgendar: { margin: SPACING.lg, backgroundColor: COLORS.primaryDark, padding: 18, borderRadius: RADIUS.md, alignItems: "center" },
   btnAgendarText: { color: COLORS.white, fontFamily: FONTS.bold, fontSize: 16 },
+  erroTexto: { fontFamily: FONTS.regular, color: COLORS.gray, textAlign: 'center', paddingVertical: 20 },
 });

@@ -1,5 +1,6 @@
 export const SERVICOS = [
   {
+    id: 1,
     key: "banho",
     label: "Banho",
     icon: require("../../assets/logo_banho.png"),
@@ -7,6 +8,7 @@ export const SERVICOS = [
     sombra: "#6FB4C7",
   },
   {
+    id: 2,
     key: "tosa",
     label: "Tosa",
     icon: require("../../assets/logo_tosa.png"),
@@ -14,6 +16,7 @@ export const SERVICOS = [
     sombra: "#55A891",
   },
   {
+    id: 3,
     key: "hidratacao",
     label: "Hidratação",
     icon: require("../../assets/logo_hidratacao.png"),

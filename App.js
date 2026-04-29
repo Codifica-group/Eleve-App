@@ -8,6 +8,7 @@ import {
   Nunito_700Bold,
   Nunito_800ExtraBold,
 } from "@expo-google-fonts/nunito";
+import Feedback from "./src/utils/FeedbackComponent";
 
 import AppNavigator from "./src/navigation/AppNavigator";
 
@@ -37,6 +38,7 @@ export default function App() {
     <SafeAreaProvider>
       <NavigationContainer>
         <AppNavigator />
+        <Feedback />
       </NavigationContainer>
     </SafeAreaProvider>
   );

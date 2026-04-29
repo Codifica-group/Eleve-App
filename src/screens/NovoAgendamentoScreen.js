@@ -6,12 +6,12 @@ import DateTimePicker from "@react-native-community/datetimepicker";
 import { FontAwesome } from "@expo/vector-icons";
 import { COLORS, FONTS, SPACING, RADIUS } from "../constants/theme";
 import PetCarousel from "../components/pets/PetCarousel";
-import ServiceCard from "../components/home/ServiceCard";
+import ServiceAgendaCard from "../components/agenda/ServiceAgendaCard";
 import { SERVICOS } from "../constants/data";
 import { obterOuSincronizarClienteId } from "../api/clientes/sincronizarCliente";
 import { enviarRequisicaoHttp } from "../api/compartilhado/clienteHttp";
 
-export default function AgendaScreen({ route, navigation }) {
+export default function NovoAgendamentoScreen({ route, navigation }) {
   const insets = useSafeAreaInsets();
   const servicoInicial = route?.params?.servicoInicial || null;
 
@@ -185,7 +185,7 @@ export default function AgendaScreen({ route, navigation }) {
         <Text style={styles.sectionTitle}>2. Selecione os Serviços</Text>
         <View style={styles.servicosRow}>
           {SERVICOS.slice(0, 3).map((s) => (
-            <ServiceCard
+            <ServiceAgendaCard
               key={s.key}
               servico={s}
               isSelected={selectedServices.includes(s.id)}

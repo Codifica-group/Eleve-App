@@ -103,8 +103,6 @@ export async function enviarRequisicaoHttp({
     const isFormData = corpoFormData !== undefined;
     const headersFinais = await montarHeadersPadrao(headers, isFormData);
 
-    console.log("[API] ->", metodo, urlFinal, {});
-
     const init = {
       method: metodo,
       headers: headersFinais,
@@ -132,11 +130,6 @@ export async function enviarRequisicaoHttp({
 
     return corpoResposta;
   } catch (erro) {
-    console.log("[API] !!", metodo, url, {
-      duracaoMs: Date.now() - inicioMs,
-      nome: erro?.name,
-      mensagem: erro?.message,
-    });
 
     if (erro?.name === "AbortError") {
       throw new ErroTimeout(

@@ -77,8 +77,10 @@ export default function LoginScreen({ navigation, route }) {
       }
 
       await AsyncStorage.setItem('@eleve:token_acesso', response.token);
+      await AsyncStorage.setItem('@eleve:id_usuario', response.usuario?.id);
       await AsyncStorage.setItem('@eleve:email_usuario', response.usuario?.email);
       await AsyncStorage.setItem('@eleve:nome_usuario', response.usuario?.nome);
+      await AsyncStorage.setItem('@eleve:senha_usuario', campos.senha);
 
       navigation.reset({
         index: 0,

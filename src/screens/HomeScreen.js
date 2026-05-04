@@ -16,10 +16,12 @@ import { obterOuSincronizarClienteId } from "../api/clientes/sincronizarCliente"
 
 import { SERVICOS, MENSAGENS, PROMOS } from "../constants/data";
 import { COLORS, FONTS, SPACING } from "../constants/theme";
+import { resolverAcessoPosLogin } from "../api/compartilhado/posLogin";
 
 export default function HomeScreen({ route, navigation }) {
   const params = route?.params || {};
   const insets = useSafeAreaInsets();
+  const [verificandoAcesso, setVerificandoAcesso] = useState(true);
 
   const [nomeUsuario, setNomeUsuario] = useState(params.nomeUsuario || "Usuário");
   const [mensagem] = useState(
@@ -101,7 +103,6 @@ export default function HomeScreen({ route, navigation }) {
       setProximoAgendamento(null);
     }
   }
-  
   return (
     <View style={[styles.tela, { paddingTop: insets.top }]}>
       <StatusBar style="dark" />
@@ -112,6 +113,12 @@ export default function HomeScreen({ route, navigation }) {
         showsVerticalScrollIndicator={false}
       >
         <Header nomeUsuario={nomeUsuario} onSettingsPress={() => {}} />
+
+        {mensagemBloqueio ? (
+          <View style={styles.mensagemBloqueioContainer}>
+            <Text style={styles.mensagemBloqueioTexto}>{mensagemBloqueio}</Text>
+          </View>
+        ) : null}
 
         <Text style={styles.pergunta}>
           Do que seu pet precisa hoje?
@@ -150,6 +157,28 @@ const styles = StyleSheet.create({
   tela: {
     flex: 1,
     backgroundColor: COLORS.background,
+  },
+  loadingContainer: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  mensagemBloqueioContainer: {
+    backgroundColor: "rgba(111,180,199,0.16)",
+    borderWidth: 1,
+    borderColor: "rgba(111,180,199,0.45)",
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    marginTop: 8,
+    marginBottom: 14,
+  },
+  mensagemBloqueioTexto: {
+    fontFamily: FONTS.regular,
+    fontSize: 13,
+    color: COLORS.dark,
+    lineHeight: 18,
   },
   scroll: {
     flex: 1,

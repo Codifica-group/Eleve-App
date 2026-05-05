@@ -331,10 +331,10 @@ export default function PetRegistrationScreen({ navigation, route }) {
       Alert.alert("Atenção", "Informe o nome do pet.");
       return;
     }
-    if (!sexo) {
-      Alert.alert("Atenção", "Selecione o sexo do pet.");
-      return;
-    }
+    // if (!sexo) {
+    //   Alert.alert("Atenção", "Selecione o sexo do pet.");
+    //   return;
+    // }
     if (!fotoPet) {
       Alert.alert("Atenção", "Adicione uma foto do pet.");
       return;
@@ -343,10 +343,10 @@ export default function PetRegistrationScreen({ navigation, route }) {
       Alert.alert("Atenção", "Informe a raça do pet.");
       return;
     }
-    if (!porte) {
-      Alert.alert("Atenção", "Selecione o porte do pet.");
-      return;
-    }
+    // if (!porte) {
+    //   Alert.alert("Atenção", "Selecione o porte do pet.");
+    //   return;
+    // }
 
     setSalvando(true);
     try {
@@ -393,12 +393,12 @@ export default function PetRegistrationScreen({ navigation, route }) {
         />
 
         {/* Sexo */}
-        <SelectionGroup
+        {/* <SelectionGroup
           label="Sexo"
           opcoes={OPCOES_SEXO}
           valor={sexo}
           onChange={setSexo}
-        />
+        /> */}
 
         {/* Foto */}
         <Text style={styles.label}>Foto do Pet</Text>
@@ -509,12 +509,12 @@ export default function PetRegistrationScreen({ navigation, route }) {
         )}
 
         {/* Porte */}
-        <SelectionGroup
+        {/* <SelectionGroup
           label="Porte"
           opcoes={OPCOES_PORTE}
           valor={porte}
           onChange={setPorte}
-        />
+        /> */}
 
         <Button
           title={salvando ? "Cadastrando..." : "Finalizar"}

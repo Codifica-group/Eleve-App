@@ -481,14 +481,15 @@ export default function PerfilScreen({ navigation }) {
                   <Text style={styles.petInfoLabel}>Raça</Text>
                   <Text style={styles.petInfoValue}>{pet.raca}</Text>
                 </View>
-                <View style={styles.petInfoItem}>
+                {/* ESSES CAMPOS NÃO EXISTEM NO DB */}
+                {/* <View style={styles.petInfoItem}>
                   <Text style={styles.petInfoLabel}>Sexo</Text>
                   <Text style={styles.petInfoValue}>{pet.sexo}</Text>
                 </View>
                 <View style={styles.petInfoItem}>
                   <Text style={styles.petInfoLabel}>Porte</Text>
                   <Text style={styles.petInfoValue}>{pet.porte}</Text>
-                </View>
+                </View> */}
               </View>
             </View>
           ))

@@ -17,6 +17,47 @@ export default function NovoAgendamentoScreen({ route, navigation }) {
   const insets = useSafeAreaInsets();
   const servicoInicial = route?.params?.servicoInicial || null;
 
+  const criarHoje = () => {
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+    return hoje;
+  };
+
+  const ehMesmoDia = (primeiraData, segundaData) =>
+    primeiraData.getFullYear() === segundaData.getFullYear() &&
+    primeiraData.getMonth() === segundaData.getMonth() &&
+    primeiraData.getDate() === segundaData.getDate();
+
+  const formatarDataApi = (dataBase) => {
+    const ano = dataBase.getFullYear();
+    const mes = String(dataBase.getMonth() + 1).padStart(2, "0");
+    const dia = String(dataBase.getDate()).padStart(2, "0");
+    return `${ano}-${mes}-${dia}`;
+  };
+
+  const criarDataHoraLocal = (dataBase, horario) => {
+    const [hora, minuto, segundo = "0"] = String(horario || "").split(":");
+    if ([hora, minuto, segundo].some((parte) => Number.isNaN(Number(parte)))) {
+      return null;
+    }
+
+    const dataHora = new Date(dataBase);
+    dataHora.setHours(Number(hora), Number(minuto), Number(segundo), 0);
+    return Number.isNaN(dataHora.getTime()) ? null : dataHora;
+  };
+
+  const filtrarHorariosPassados = (horariosDisponiveis, dataSelecionada) => {
+    if (!ehMesmoDia(dataSelecionada, new Date())) {
+      return horariosDisponiveis;
+    }
+
+    const agora = new Date();
+    return horariosDisponiveis.filter((horario) => {
+      const dataHora = criarDataHoraLocal(dataSelecionada, horario);
+      return dataHora && dataHora.getTime() > agora.getTime();
+    });
+  };
+
   const normalizarServicoSelecionado = (valor) => {
     if (valor === null || valor === undefined || valor === "") return null;
 
@@ -37,13 +78,13 @@ export default function NovoAgendamentoScreen({ route, navigation }) {
     servicoInicialKey ? [servicoInicialKey] : []
   );
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  const today = criarHoje();
 
   const [date, setDate] = useState(today);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [horarios, setHorarios] = useState([]);
   const [selectedTime, setSelectedTime] = useState("");
+  const [mensagemErroData, setMensagemErroData] = useState("");
   const [mensagemErroHorario, setMensagemErroHorario] = useState("");
   const [carregandoHorarios, setCarregandoHorarios] = useState(false);
 
@@ -78,12 +119,12 @@ export default function NovoAgendamentoScreen({ route, navigation }) {
   useEffect(() => {
     const unsubscribe = navigation.addListener("focus", () => {
       // Limpa os campos e reinicia a data para hoje
-      const resetDate = new Date();
-      resetDate.setHours(0, 0, 0, 0);
+      const resetDate = criarHoje();
       
       setDate(resetDate);
       setDateText(formatDate(resetDate));
       setSelectedTime("");
+      setMensagemErroData("");
       setMensagemErroHorario("");
 
       // Lida com o parâmetro de serviço inicial e o limpa para as próximas visitas
@@ -125,17 +166,29 @@ export default function NovoAgendamentoScreen({ route, navigation }) {
     setMensagemErroHorario("");
     setCarregandoHorarios(true);
 
-    const dataFormatada = dataSelecionada.toISOString().split("T")[0];
+    const hoje = criarHoje();
+    if (dataSelecionada < hoje) {
+      setMensagemErroHorario("Datas passadas não estão disponíveis para agendamento.");
+      setCarregandoHorarios(false);
+      return;
+    }
+
+    const dataFormatada = formatarDataApi(dataSelecionada);
     try {
       const data = await enviarRequisicaoHttp({
         metodo: "GET",
         endpoint: `/agendas/disponibilidade?inicio=${dataFormatada}T00:00:00&fim=${dataFormatada}T23:59:59`
       });
 
-      if (data && data.length > 0 && data[0].horarios.length > 0) {
-        setHorarios(data[0].horarios);
+      const horariosRecebidos = data?.[0]?.horarios || [];
+      const horariosFuturos = filtrarHorariosPassados(horariosRecebidos, dataSelecionada);
+
+      if (horariosFuturos.length > 0) {
+        setHorarios(horariosFuturos);
         setIsAtStart(true);
-        setIsAtEnd(data[0].horarios.length <= 4);
+        setIsAtEnd(horariosFuturos.length <= 4);
+      } else if (horariosRecebidos.length > 0 && ehMesmoDia(dataSelecionada, new Date())) {
+        setMensagemErroHorario("Os horários de hoje já passaram. Escolha outro dia.");
       } else {
         setMensagemErroHorario("Nenhum horário disponível para esta data.");
       }
@@ -152,8 +205,17 @@ export default function NovoAgendamentoScreen({ route, navigation }) {
     if (selectedDate) {
       const newDate = new Date(selectedDate);
       newDate.setHours(0,0,0,0);
+      if (newDate < criarHoje()) {
+        setHorarios([]);
+        setSelectedTime("");
+        setMensagemErroHorario("");
+        setMensagemErroData("Escolha hoje ou uma data futura.");
+        return;
+      }
+
       setDate(newDate);
       setDateText(formatDate(newDate));
+      setMensagemErroData("");
     }
   };
 
@@ -162,10 +224,27 @@ export default function NovoAgendamentoScreen({ route, navigation }) {
     if (formattedText.length > 2) formattedText = `${formattedText.slice(0, 2)}/${formattedText.slice(2)}`;
     if (formattedText.length > 5) formattedText = `${formattedText.slice(0, 5)}/${formattedText.slice(5, 9)}`;
     setDateText(formattedText);
+    setMensagemErroData("");
 
     if (formattedText.length === 10) {
       const parsed = parseDate(formattedText);
-      if (parsed && parsed >= today) {
+      if (!parsed) {
+        setHorarios([]);
+        setSelectedTime("");
+        setMensagemErroHorario("");
+        setMensagemErroData("Digite uma data válida.");
+        return;
+      }
+
+      if (parsed < criarHoje()) {
+        setHorarios([]);
+        setSelectedTime("");
+        setMensagemErroHorario("");
+        setMensagemErroData("Escolha hoje ou uma data futura.");
+        return;
+      }
+
+      if (parsed >= today) {
         setDate(parsed);
       }
     }
@@ -188,6 +267,7 @@ export default function NovoAgendamentoScreen({ route, navigation }) {
   const podeSolicitarAgendamento =
     Boolean(selectedPet) &&
     selectedServices.length > 0 &&
+    !mensagemErroData &&
     temHorariosDisponiveis &&
     horarioSelecionadoValido &&
     !carregandoHorarios;
@@ -195,6 +275,11 @@ export default function NovoAgendamentoScreen({ route, navigation }) {
   const agendar = async () => {
     if (!selectedPet || selectedServices.length === 0) {
       FeedbackManager.error("Preencha Pet e Serviço antes de solicitar o agendamento.");
+      return;
+    }
+
+    if (mensagemErroData) {
+      FeedbackManager.error(mensagemErroData);
       return;
     }
 
@@ -209,8 +294,17 @@ export default function NovoAgendamentoScreen({ route, navigation }) {
     }
 
     try {
+      const dataHoraSelecionada = criarDataHoraLocal(date, selectedTime);
+      if (!dataHoraSelecionada || dataHoraSelecionada.getTime() <= Date.now()) {
+        setSelectedTime("");
+        setMensagemErroHorario("Escolha um horário futuro para continuar.");
+        await carregarDisponibilidade(date);
+        FeedbackManager.error("Esse horário já passou. Escolha um horário futuro.");
+        return;
+      }
+
       const clienteId = await obterOuSincronizarClienteId();
-      const dataFormatada = date.toISOString().split("T")[0];
+      const dataFormatada = formatarDataApi(date);
       const servicosResolvidos = await resolverServicosAgendamento(selectedServices);
       const payload = {
         chatId: clienteId,
@@ -235,17 +329,26 @@ export default function NovoAgendamentoScreen({ route, navigation }) {
       FeedbackManager.success("Agendamento solicitado com sucesso.");
       
       // Limpa os campos logo após o sucesso
-      const resetDate = new Date();
-      resetDate.setHours(0, 0, 0, 0);
+      const resetDate = criarHoje();
       setDate(resetDate);
       setDateText(formatDate(resetDate));
       setSelectedServices([]);
       setSelectedTime("");
+      setMensagemErroData("");
       if (pets.length > 0) setSelectedPet(pets[0].id);
 
       navigation.navigate("HomeTab");
     } catch (error) {
       console.log("Erro ao agendar:", error);
+      const mensagemBackend = String(error?.message || "").toLowerCase();
+      if (mensagemBackend.includes("data no passado")) {
+        setSelectedTime("");
+        setMensagemErroHorario("Esse horário já passou. Escolha um horário futuro.");
+        await carregarDisponibilidade(date);
+        FeedbackManager.error("Esse horário já passou. Escolha um horário futuro.");
+        return;
+      }
+
       const mensagem =
         error?.message?.includes("Serviço não encontrado")
           ? "Não foi possível localizar os serviços selecionados. Atualize a tela e tente novamente."
@@ -291,6 +394,10 @@ export default function NovoAgendamentoScreen({ route, navigation }) {
               <FontAwesome name="calendar" size={24} color={COLORS.primaryDark} />
             </TouchableOpacity>
           </View>
+
+          <Text style={mensagemErroData ? styles.erroDataTexto : styles.dateHintText}>
+            {mensagemErroData || "Datas passadas não podem ser agendadas. Para hoje, mostramos apenas horários futuros."}
+          </Text>
 
           {showDatePicker && (
             <DateTimePicker
@@ -386,6 +493,18 @@ const styles = StyleSheet.create({
   },
   calendarIcon: {
     padding: 8,
+  },
+  dateHintText: {
+    fontFamily: FONTS.regular,
+    color: COLORS.primaryMedium,
+    fontSize: 13,
+    marginTop: -2,
+  },
+  erroDataTexto: {
+    fontFamily: FONTS.regular,
+    color: "#C62828",
+    fontSize: 13,
+    marginTop: -2,
   },
   horariosContainer: { marginTop: 10 },
   dateScroll: { flexDirection: "row", marginBottom: 10 },

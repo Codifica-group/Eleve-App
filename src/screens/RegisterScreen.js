@@ -36,7 +36,7 @@ export default function RegisterScreen({ navigation }) {
   const [erroServidor, setErroServidor] = useState(null);
 
   const camposParaValidar = useMemo(
-    () => ["nome", "telefone", "email", "senha", "cep", "endereco", "bairro", "cidade", "numEndereco"],
+    () => ["nome", "telefone", "email", "senha", "cep", "endereco", "bairro", "cidade"],
     []
   );
   const { erros, formularioValido } = useFormValidation(campos, camposParaValidar);
@@ -294,7 +294,7 @@ export default function RegisterScreen({ navigation }) {
           editable={false}
         />
         <Input
-          label="Número"
+          label="Número (opcional)"
           value={campos.numEndereco}
           onChangeText={(v) => atualizar("numEndereco", v.replace(/\D/g, ""))}
           onBlur={() => tocarCampo("numEndereco")}

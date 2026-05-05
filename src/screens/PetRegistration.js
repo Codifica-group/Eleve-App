@@ -172,7 +172,6 @@ function traduzirTemperamento(valor) {
 export default function PetRegistrationScreen({ navigation, route }) {
   const { nomeUsuario, telefone, email, endereco, cep, fromPerfil, token: tokenRecebido } =
     route.params || {};
-  const imagemSelecionada = route.params?.selectedImage;
 
   const [nomePet, setNomePet] = useState("");
   const [sexo, setSexo] = useState("");
@@ -213,10 +212,14 @@ export default function PetRegistrationScreen({ navigation, route }) {
   }, [fotoPet, token]);
 
   useEffect(() => {
-    if (!imagemSelecionada) return;
-    setFotoPet(imagemSelecionada);
-    navigation.setParams({ selectedImage: undefined });
-  }, [imagemSelecionada, navigation]);
+    const unsubscribe = navigation.addListener("focus", async () => {
+      const uri = await AsyncStorage.getItem("@eleve:foto_pet_pendente");
+      if (!uri) return;
+      await AsyncStorage.removeItem("@eleve:foto_pet_pendente");
+      setFotoPet(uri);
+    });
+    return unsubscribe;
+  }, [navigation]);
 
 
   async function identificarRaca(imagemUri) {

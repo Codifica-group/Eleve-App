@@ -3,16 +3,14 @@ import { View, Text, TouchableOpacity, StyleSheet, Alert } from "react-native";
 import { FontAwesome, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import * as DocumentPicker from "expo-document-picker";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import SafeScreen from "../components/common/SafeScreen";
 import { COLORS, FONTS } from "../constants/theme";
 
-export default function UploadPhotoScreen({ navigation, route }) {
-  const goBackWithImage = (uri) => {
-    navigation.navigate({
-      name: "PetRegistration",
-      params: { selectedImage: uri },
-      merge: true,
-    });
+export default function UploadPhotoScreen({ navigation }) {
+  const goBackWithImage = async (uri) => {
+    await AsyncStorage.setItem("@eleve:foto_pet_pendente", uri);
+    navigation.goBack();
   };
 
   const tirarFoto = async () => {

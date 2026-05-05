@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -19,10 +19,11 @@ import { FontAwesome } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { COLORS, FONTS, SPACING, RADIUS } from "../constants/theme";
 import { enviarRequisicaoHttp } from "../api/compartilhado/clienteHttp";
-import { buscarClientePorId } from "../api/clientes/cadastrarCliente";
+import { buscarClientePorId, atualizarCliente } from "../api/clientes/cadastrarCliente";
 import { obterOuSincronizarClienteId } from "../api/clientes/sincronizarCliente";
 import { listarPetsPorClienteSimples } from "../api/pets/listarPetsPorCliente";
 import { extrairEmailDoToken } from "../utils/tokenJwt";
+import { formatarCep } from "../hooks/useFormValidation";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const EMAIL_KEY = "@eleve:email_usuario";
@@ -48,6 +49,7 @@ function ModalInput({ label, value, onChangeText, ...props }) {
 
 export default function PerfilScreen({ navigation }) {
   const insets = useSafeAreaInsets();
+  const ultimoCepBuscadoRef = useRef("");
 
   const [usuario, setUsuario] = useState({
     nome: "Usuário",
@@ -55,9 +57,30 @@ export default function PerfilScreen({ navigation }) {
     telefone: "",
     endereco: "",
   });
+  const [clienteId, setClienteId] = useState(null);
+  const [dadosEndereco, setDadosEndereco] = useState({
+    cep: "",
+    rua: "",
+    numEndereco: "",
+    bairro: "",
+    cidade: "",
+    complemento: "",
+  });
   const [pets, setPets] = useState([]);
   const [editUserVisivel, setEditUserVisivel] = useState(false);
-  const [editUser, setEditUser] = useState({ ...usuario });
+  const [editUser, setEditUser] = useState({
+    nome: "",
+    email: "",
+    telefone: "",
+    cep: "",
+    rua: "",
+    numEndereco: "",
+    bairro: "",
+    cidade: "",
+    complemento: "",
+  });
+  const [carregandoCepEdicao, setCarregandoCepEdicao] = useState(false);
+  const [erroCepEdicao, setErroCepEdicao] = useState(null);
 
   // Recarrega ao focar (após voltar do cadastro de pet)
   useEffect(() => {
@@ -83,6 +106,17 @@ export default function PerfilScreen({ navigation }) {
     const linhaSecundaria = [bairro, cidade].filter(Boolean).join(" • ");
 
     return [linhaPrincipal, linhaSecundaria].filter(Boolean).join(" · ");
+  }
+
+  function montarDetalhesEndereco(dadosCliente) {
+    return {
+      cep: normalizarValorSalvo(dadosCliente?.cep),
+      rua: normalizarValorSalvo(dadosCliente?.rua),
+      numEndereco: normalizarValorSalvo(dadosCliente?.numEndereco),
+      bairro: normalizarValorSalvo(dadosCliente?.bairro),
+      cidade: normalizarValorSalvo(dadosCliente?.cidade),
+      complemento: normalizarValorSalvo(dadosCliente?.complemento),
+    };
   }
 
   async function obterPerfilLocalSalvo() {
@@ -140,8 +174,9 @@ export default function PerfilScreen({ navigation }) {
     const perfilLocal = await obterPerfilLocalSalvo();
 
     try {
-      const clienteId = await obterOuSincronizarClienteId();
-      const dadosCliente = await buscarClientePorId(clienteId);
+      const clienteIdAtual = await obterOuSincronizarClienteId();
+      const dadosCliente = await buscarClientePorId(clienteIdAtual);
+      const detalhesEndereco = montarDetalhesEndereco(dadosCliente);
 
       const enderecoCliente = montarEnderecoCliente(dadosCliente);
       const enderecoFinal = enderecoCliente || perfilLocal.endereco;
@@ -150,6 +185,8 @@ export default function PerfilScreen({ navigation }) {
         : perfilLocal.telefone;
       const emailFinal = perfilLocal.email || normalizarValorSalvo(dadosCliente.email);
 
+      setClienteId(clienteIdAtual);
+      setDadosEndereco(detalhesEndereco);
       setUsuario({
         nome: dadosCliente.nome || "Usuário",
         email: emailFinal,
@@ -163,7 +200,7 @@ export default function PerfilScreen({ navigation }) {
         endereco: enderecoFinal,
       });
 
-      const petsDoCliente = await listarPetsPorClienteSimples(clienteId);
+      const petsDoCliente = await listarPetsPorClienteSimples(clienteIdAtual);
       if (petsDoCliente && petsDoCliente.length > 0) {
         setPets(
           petsDoCliente.map((pet) => ({
@@ -192,18 +229,140 @@ export default function PerfilScreen({ navigation }) {
   function formatarTelefone(telefone) {
     const n = String(telefone || "").replace(/\D/g, "");
     if (n.length === 11) return `(${n.slice(0, 2)}) ${n.slice(2, 7)}-${n.slice(7)}`;
+    if (n.length === 10) return `(${n.slice(0, 2)}) ${n.slice(2, 6)}-${n.slice(6)}`;
     return String(telefone || "");
   }
 
   function abrirEditarPerfil() {
-    setEditUser({ ...usuario });
+    setErroCepEdicao(null);
+    setEditUser({
+      nome: normalizarValorSalvo(usuario.nome),
+      email: normalizarValorSalvo(usuario.email),
+      telefone: normalizarValorSalvo(usuario.telefone),
+      cep: normalizarValorSalvo(dadosEndereco.cep),
+      rua: normalizarValorSalvo(dadosEndereco.rua),
+      numEndereco: normalizarValorSalvo(dadosEndereco.numEndereco),
+      bairro: normalizarValorSalvo(dadosEndereco.bairro),
+      cidade: normalizarValorSalvo(dadosEndereco.cidade),
+      complemento: normalizarValorSalvo(dadosEndereco.complemento),
+    });
     setEditUserVisivel(true);
   }
 
+  async function buscarEnderecoPorCepEdicao(cepLimpo) {
+    if (cepLimpo.length !== 8 || ultimoCepBuscadoRef.current === cepLimpo) {
+      return;
+    }
+
+    ultimoCepBuscadoRef.current = cepLimpo;
+    setErroCepEdicao(null);
+
+    try {
+      setCarregandoCepEdicao(true);
+      const resposta = await fetch(`https://viacep.com.br/ws/${cepLimpo}/json/`);
+      if (!resposta.ok) {
+        throw new Error("Falha ao consultar CEP");
+      }
+
+      const dados = await resposta.json();
+      if (dados.erro) {
+        throw new Error("CEP não encontrado");
+      }
+
+      setEditUser((prev) => ({
+        ...prev,
+        rua: dados.logradouro || "",
+        bairro: dados.bairro || "",
+        cidade: dados.localidade || "",
+      }));
+    } catch {
+      setEditUser((prev) => ({
+        ...prev,
+        rua: "",
+        bairro: "",
+        cidade: "",
+      }));
+      setErroCepEdicao("Não foi possível preencher o endereço pelo CEP. Verifique o CEP informado.");
+    } finally {
+      setCarregandoCepEdicao(false);
+    }
+  }
+
+  function onChangeCepEdicao(valor) {
+    const cepFormatado = formatarCep(valor);
+    const cepLimpo = cepFormatado.replace(/\D/g, "");
+
+    setEditUser((prev) => ({ ...prev, cep: cepFormatado }));
+
+    if (cepLimpo.length < 8) {
+      ultimoCepBuscadoRef.current = "";
+      setErroCepEdicao(null);
+      setEditUser((prev) => ({
+        ...prev,
+        cep: cepFormatado,
+        rua: "",
+        bairro: "",
+        cidade: "",
+      }));
+      return;
+    }
+
+    buscarEnderecoPorCepEdicao(cepLimpo);
+  }
+
   async function salvarUsuario() {
+    const nomeAtualizado = normalizarValorSalvo(editUser.nome);
     const emailAtualizado = normalizarValorSalvo(editUser.email);
-    const telefoneAtualizado = normalizarValorSalvo(editUser.telefone);
-    const enderecoAtualizado = normalizarValorSalvo(editUser.endereco);
+    const telefoneNumeros = normalizarValorSalvo(editUser.telefone).replace(/\D/g, "");
+    const telefoneAtualizado = formatarTelefone(telefoneNumeros);
+    const cepAtualizado = normalizarValorSalvo(editUser.cep).replace(/\D/g, "");
+    const ruaAtualizada = normalizarValorSalvo(editUser.rua);
+    const numeroAtualizado = normalizarValorSalvo(editUser.numEndereco);
+    const bairroAtualizado = normalizarValorSalvo(editUser.bairro);
+    const cidadeAtualizada = normalizarValorSalvo(editUser.cidade);
+    const complementoAtualizado = normalizarValorSalvo(editUser.complemento);
+
+    if (!nomeAtualizado) {
+      Alert.alert("Atenção", "Informe o nome do usuário.");
+      return;
+    }
+
+    if (telefoneNumeros.length < 10 || telefoneNumeros.length > 11) {
+      Alert.alert("Atenção", "Informe um telefone válido.");
+      return;
+    }
+
+    if (!cepAtualizado || cepAtualizado.length !== 8) {
+      Alert.alert("Atenção", "Informe um CEP válido para atualizar o endereço.");
+      return;
+    }
+
+    if (!ruaAtualizada || !bairroAtualizado || !cidadeAtualizada) {
+      Alert.alert("Atenção", "Preencha o CEP para completar rua, bairro e cidade.");
+      return;
+    }
+
+    const clienteIdAtual = clienteId || await obterOuSincronizarClienteId();
+    const detalhesAtualizados = {
+      cep: cepAtualizado,
+      rua: ruaAtualizada,
+      numEndereco: numeroAtualizado,
+      bairro: bairroAtualizado,
+      cidade: cidadeAtualizada,
+      complemento: complementoAtualizado,
+    };
+    const enderecoAtualizado = montarEnderecoCliente(detalhesAtualizados);
+
+    await atualizarCliente(clienteIdAtual, {
+      nome: nomeAtualizado,
+      telefone: telefoneNumeros,
+      cep: cepAtualizado,
+      rua: ruaAtualizada,
+      numEndereco: numeroAtualizado || null,
+      bairro: bairroAtualizado,
+      cidade: cidadeAtualizada,
+      complemento: complementoAtualizado || null,
+    });
 
     await salvarPerfilLocal({
       email: emailAtualizado,
@@ -211,11 +370,13 @@ export default function PerfilScreen({ navigation }) {
       endereco: enderecoAtualizado,
     });
 
+    setClienteId(clienteIdAtual);
+    setDadosEndereco(detalhesAtualizados);
     setUsuario({
-      ...editUser,
+      nome: nomeAtualizado,
       email: emailAtualizado,
       telefone: telefoneAtualizado,
-      endereco: enderecoAtualizado,
+      endereco: enderecoAtualizado || "Endereço não informado",
     });
     setEditUserVisivel(false);
   }
@@ -376,14 +537,6 @@ export default function PerfilScreen({ navigation }) {
                 keyboardType="email-address"
               />
               <ModalInput
-                label="Endereço"
-                value={editUser.endereco}
-                onChangeText={(v) =>
-                  setEditUser((p) => ({ ...p, endereco: v }))
-                }
-                placeholder="Seu endereço"
-              />
-              <ModalInput
                 label="Telefone"
                 value={editUser.telefone}
                 onChangeText={(v) =>
@@ -391,6 +544,68 @@ export default function PerfilScreen({ navigation }) {
                 }
                 placeholder="(11) 99999-9999"
                 keyboardType="phone-pad"
+              />
+              <ModalInput
+                label="CEP"
+                value={editUser.cep}
+                onChangeText={onChangeCepEdicao}
+                placeholder="00000-000"
+                keyboardType="numeric"
+                maxLength={9}
+              />
+              <Text
+                style={[
+                  styles.cepInfo,
+                  erroCepEdicao ? styles.cepInfoErro : null,
+                ]}
+              >
+                {erroCepEdicao ||
+                  (carregandoCepEdicao
+                    ? "Buscando endereço pelo CEP..."
+                    : "Informe o CEP para preencher rua, bairro e cidade automaticamente.")}
+              </Text>
+              <ModalInput
+                label="Rua"
+                value={editUser.rua}
+                onChangeText={(v) => setEditUser((p) => ({ ...p, rua: v }))}
+                placeholder="Rua, avenida, travessa..."
+                autoCapitalize="words"
+              />
+              <ModalInput
+                label="Número (opcional)"
+                value={editUser.numEndereco}
+                onChangeText={(v) =>
+                  setEditUser((p) => ({ ...p, numEndereco: v }))
+                }
+                placeholder="Ex.: 120"
+                keyboardType="numeric"
+              />
+              <ModalInput
+                label="Bairro"
+                value={editUser.bairro}
+                onChangeText={(v) =>
+                  setEditUser((p) => ({ ...p, bairro: v }))
+                }
+                placeholder="Seu bairro"
+                autoCapitalize="words"
+              />
+              <ModalInput
+                label="Cidade"
+                value={editUser.cidade}
+                onChangeText={(v) =>
+                  setEditUser((p) => ({ ...p, cidade: v }))
+                }
+                placeholder="Sua cidade"
+                autoCapitalize="words"
+              />
+              <ModalInput
+                label="Complemento"
+                value={editUser.complemento}
+                onChangeText={(v) =>
+                  setEditUser((p) => ({ ...p, complemento: v }))
+                }
+                placeholder="Apartamento, bloco, referência..."
+                autoCapitalize="words"
               />
             </ScrollView>
 
@@ -649,6 +864,17 @@ const styles = StyleSheet.create({
     color: COLORS.white,
   },
   modalInputWrapper: { marginBottom: 14 },
+  cepInfo: {
+    fontSize: 12,
+    fontFamily: FONTS.regular,
+    color: COLORS.primaryMedium,
+    marginTop: -4,
+    marginBottom: 12,
+    lineHeight: 17,
+  },
+  cepInfoErro: {
+    color: COLORS.pink,
+  },
   modalInputLabel: {
     fontSize: 12,
     fontFamily: FONTS.bold,

@@ -70,3 +70,11 @@ export async function buscarClientePorId(clienteId) {
     throw error;
   }
 }
+
+export async function atualizarCliente(clienteId, dadosCliente) {
+  return enviarRequisicaoHttp({
+    metodo: "PUT",
+    endpoint: `/clientes/${clienteId}`,
+    corpoJson: dadosCliente,
+  });
+}

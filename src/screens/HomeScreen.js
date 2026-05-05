@@ -30,6 +30,9 @@ export default function HomeScreen({ route, navigation }) {
   
   const [proximoAgendamento, setProximoAgendamento] = useState(null);
 
+  // Corrige erro de referência: define mensagemBloqueio
+  const [mensagemBloqueio, setMensagemBloqueio] = useState(null);
+
   useEffect(() => {
     async function carregarNomeUsuario() {
       const nome = await AsyncStorage.getItem("@eleve:nome_usuario");
@@ -65,12 +68,28 @@ export default function HomeScreen({ route, navigation }) {
       });
 
       if (!response.ok) {
-        throw new Error("Erro ao buscar solicitações da agenda na Home.");
+        throw new Error(`Erro ao buscar solicitações: ${response.status}`);
       }
 
-      const dados = await response.json();
+      // Valida se a resposta tem conteúdo antes de fazer parse
+      const responseText = await response.text();
+      
+      if (!responseText || responseText.trim() === "") {
+        console.warn("API retornou resposta vazia");
+        setProximoAgendamento(null);
+        return;
+      }
 
-      if (dados && dados.length > 0) {
+      let dados;
+      try {
+        dados = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error("Erro ao fazer parse da resposta JSON:", parseError, "Resposta:", responseText);
+        setProximoAgendamento(null);
+        return;
+      }
+
+      if (dados && Array.isArray(dados) && dados.length > 0) {
         const agora = new Date();
 
         const agendamentosFuturos = dados.filter(item => new Date(item.dataHoraInicio) > agora);

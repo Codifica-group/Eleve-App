@@ -1,11 +1,12 @@
 import { montarUrlBackend } from "../compartilhado/proxyBackend";
+import { obterNomeRacaParaConsultaExterna } from "./deParaRacas";
 
 function normalizarTexto(valor) {
   return String(valor || "").trim();
 }
 
 export async function buscarInfoRacaExterna(nomeRaca) {
-  const nome = normalizarTexto(nomeRaca);
+  const nome = obterNomeRacaParaConsultaExterna(normalizarTexto(nomeRaca));
   if (!nome) return null;
 
   const url = montarUrlBackend(`/racas/externa/info/${encodeURIComponent(nome)}`);

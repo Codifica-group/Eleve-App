@@ -54,7 +54,24 @@ export default function AgendaScreen({ navigation }) {
         throw new Error("Erro ao buscar solicitações da agenda.");
       }
 
-      const dados = await response.json();
+      // Valida se a resposta tem conteúdo antes de fazer parse
+      const responseText = await response.text();
+      
+      if (!responseText || responseText.trim() === "") {
+        console.warn("API retornou resposta vazia");
+        setAgendamentos([]);
+        return;
+      }
+
+      let dados;
+      try {
+        dados = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error("Erro ao fazer parse da resposta JSON:", parseError, "Resposta:", responseText);
+        setAgendamentos([]);
+        return;
+      }
+
       setAgendamentos(dados || []);
     } catch (error) {
       console.error("Falha ao carregar agenda:", error);

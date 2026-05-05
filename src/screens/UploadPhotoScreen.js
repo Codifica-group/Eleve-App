@@ -6,13 +6,15 @@ import * as DocumentPicker from "expo-document-picker";
 import SafeScreen from "../components/common/SafeScreen";
 import { COLORS, FONTS } from "../constants/theme";
 
-export default function UploadPhotoScreen({ navigation }) {
+export default function UploadPhotoScreen({ navigation, route }) {
   const goBackWithImage = (uri) => {
-    navigation.navigate({
-      name: "PetRegistration",
-      params: { selectedImage: uri },
-      merge: true,
-    });
+    const callback = route.params?.aoSelecionarImagem;
+    if (callback) {
+      callback(uri);
+      navigation.goBack();
+    } else {
+      navigation.navigate("PetRegistration", { selectedImage: uri });
+    }
   };
 
   const tirarFoto = async () => {

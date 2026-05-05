@@ -84,9 +84,37 @@ async function montarHeadersPadrao(headers, isFormData) {
   };
 }
 
+function ehUrlAbsoluta(valor) {
+  return /^https?:\/\//i.test(String(valor || "").trim());
+}
+
+function resolverUrlRequisicao({ endpoint, url }) {
+  const urlLegada = String(url || "").trim();
+  if (urlLegada) {
+    return urlLegada;
+  }
+
+  const endpointNormalizado = String(endpoint || "").trim();
+  if (!endpointNormalizado) {
+    throw new Error("Nenhum endpoint foi informado para a requisição.");
+  }
+
+  if (ehUrlAbsoluta(endpointNormalizado)) {
+    return endpointNormalizado;
+  }
+
+  const baseUrl = obterEnderecoBaseApi();
+  const caminho = endpointNormalizado.startsWith("/")
+    ? endpointNormalizado
+    : `/${endpointNormalizado}`;
+
+  return `${baseUrl}${caminho}`;
+}
+
 export async function enviarRequisicaoHttp({
   metodo,
   endpoint,
+  url,
   headers,
   corpoJson,
   corpoFormData,
@@ -94,12 +122,11 @@ export async function enviarRequisicaoHttp({
 }) {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-  const inicioMs = Date.now();
+  let urlFinal = "";
 
   try {
-    const baseUrl = obterEnderecoBaseApi();
-    const urlFinal = `${baseUrl}${endpoint}`;
-    
+    urlFinal = resolverUrlRequisicao({ endpoint, url });
+
     const isFormData = corpoFormData !== undefined;
     const headersFinais = await montarHeadersPadrao(headers, isFormData);
 
@@ -130,7 +157,6 @@ export async function enviarRequisicaoHttp({
 
     return corpoResposta;
   } catch (erro) {
-
     if (erro?.name === "AbortError") {
       throw new ErroTimeout(
         `Não foi possível conectar ao servidor (${urlFinal}). Se estiver no emulador Android, use 10.0.2.2. Se estiver no celular, use o IP da sua máquina na rede.`

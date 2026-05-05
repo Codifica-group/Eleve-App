@@ -7,6 +7,7 @@ import { COLORS, FONTS, SPACING } from "../constants/theme";
 import useFormValidation from "../hooks/useFormValidation";
 import { logarUsuario } from "../api/usuarios/logarUsuario";
 import { obterMensagemAmigavel } from "../api/compartilhado/errosApi";
+import { resolverAcessoPosLogin } from "../api/compartilhado/posLogin";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function LoginScreen({ navigation, route }) {
@@ -57,6 +58,15 @@ export default function LoginScreen({ navigation, route }) {
     return Boolean(camposTocados?.[campo]);
   }
 
+  async function limparSessaoParcial() {
+    await AsyncStorage.multiRemove([
+      "@eleve:token_acesso",
+      "@eleve:email_usuario",
+      "@eleve:nome_usuario",
+      "@eleve:cliente_id",
+    ]);
+  }
+
   async function entrar() {
     setErroServidor(null);
     marcarTodosComoTocados();
@@ -76,9 +86,39 @@ export default function LoginScreen({ navigation, route }) {
         throw new Error("Não foi possível autenticar. Tente novamente.");
       }
 
+      await AsyncStorage.removeItem('@eleve:cliente_id');
       await AsyncStorage.setItem('@eleve:token_acesso', response.token);
       await AsyncStorage.setItem('@eleve:email_usuario', response.usuario?.email);
       await AsyncStorage.setItem('@eleve:nome_usuario', response.usuario?.nome);
+
+      const acesso = await resolverAcessoPosLogin({
+        email: response.usuario?.email || campos.email,
+        tokenAcesso: response.token,
+      });
+
+      if (!acesso.temCliente || !acesso.clienteId) {
+        await limparSessaoParcial();
+        throw new Error("Seu cadastro de cliente não foi localizado. Faça o cadastro novamente.");
+      }
+
+      await AsyncStorage.setItem("@eleve:cliente_id", String(acesso.clienteId));
+
+      if (!acesso.temPet) {
+        navigation.reset({
+          index: 0,
+          routes: [
+            {
+              name: "PetRegistration",
+              params: {
+                nomeUsuario: acesso.nomeUsuario || response.usuario?.nome,
+                email: response.usuario?.email || campos.email,
+                token: response.token,
+              },
+            },
+          ],
+        });
+        return;
+      }
 
       navigation.reset({
         index: 0,
@@ -94,6 +134,7 @@ export default function LoginScreen({ navigation, route }) {
         ],
       });
     } catch (e) {
+      await limparSessaoParcial();
       setErroServidor(obterMensagemAmigavel(e));
     } finally {
       setCarregando(false);

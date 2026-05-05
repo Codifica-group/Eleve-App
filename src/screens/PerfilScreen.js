@@ -18,8 +18,10 @@ import { StatusBar } from "expo-status-bar";
 import { FontAwesome } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { COLORS, FONTS, SPACING, RADIUS } from "../constants/theme";
-import { OPCOES_SEXO, OPCOES_PORTE } from "../constants/data";
 import { enviarRequisicaoHttp } from "../api/compartilhado/clienteHttp";
+import { buscarClientePorId } from "../api/clientes/cadastrarCliente";
+import { obterOuSincronizarClienteId } from "../api/clientes/sincronizarCliente";
+import { listarPetsPorClienteSimples } from "../api/pets/listarPetsPorCliente";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -38,185 +40,131 @@ function ModalInput({ label, value, onChangeText, ...props }) {
   );
 }
 
-function ModalSelectionGroup({ label, opcoes, valor, onChange }) {
-  return (
-    <View style={styles.modalInputWrapper}>
-      <Text style={styles.modalInputLabel}>{label}</Text>
-      <View style={styles.modalSelectionRow}>
-        {opcoes.map((op) => (
-          <TouchableOpacity
-            key={op}
-            style={[
-              styles.modalSelectionBtn,
-              valor === op && styles.modalSelectionBtnActive,
-            ]}
-            onPress={() => onChange(op)}
-          >
-            <Text
-              style={[
-                styles.modalSelectionText,
-                valor === op && styles.modalSelectionTextActive,
-              ]}
-            >
-              {op}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-    </View>
-  );
-}
-
-export default function PerfilScreen({ navigation, route }) {
+export default function PerfilScreen({ navigation }) {
   const insets = useSafeAreaInsets();
-  const params = route?.params || {};
 
   const [usuario, setUsuario] = useState({
-    nome: params.nomeUsuario || "Usuário",
-    email: params.email || "email@exemplo.com",
-    telefone: params.telefone || "(11) 98640-0678",
-    endereco: params.endereco || "Endereço não informado",
+    nome: "Usuário",
+    email: "",
+    telefone: "",
+    endereco: "",
   });
-
-  const [pets, setPets] = useState([
-    {
-      nome: params.nomePet || "Pet",
-      raca: params.racaPet || "Não informada",
-      sexo: params.sexoPet || "Não informado",
-      porte: params.portePet || "Não informado",
-      foto: params.fotoPet || null,
-    },
-  ]);
-
-  useEffect(() => {
-    if (params.nomeUsuario) {
-      setUsuario({
-        nome: params.nomeUsuario,
-        email: params.email || "email@exemplo.com",
-        telefone: params.telefone || "(11) 98640-0678",
-        endereco: params.endereco || "Endereço não informado",
-      });
-    }
-    if (params.nomePet) {
-      setPets((prev) => {
-        const updated = [...prev];
-        updated[0] = {
-          nome: params.nomePet,
-          raca: params.racaPet || "Não informada",
-          sexo: params.sexoPet || "Não informado",
-          porte: params.portePet || "Não informado",
-          foto: params.fotoPet || null,
-        };
-        return updated;
-      });
-    }
-  }, [params.nomeUsuario, params.nomePet]);
-
-  const [menuVisivel, setMenuVisivel] = useState(false);
+  const [pets, setPets] = useState([]);
   const [editUserVisivel, setEditUserVisivel] = useState(false);
-  const [editPetVisivel, setEditPetVisivel] = useState(false);
-  const [petEditIndex, setPetEditIndex] = useState(0);
-  const [selectPetVisivel, setSelectPetVisivel] = useState(false);
-
   const [editUser, setEditUser] = useState({ ...usuario });
-  const [editPet, setEditPet] = useState({ ...pets[0] });
 
-  const primeiroNome = usuario.nome.trim().split(" ")[0];
+  // Recarrega ao focar (após voltar do cadastro de pet)
+  useEffect(() => {
+    const unsubscribe = navigation.addListener("focus", carregarDadosUsuario);
+    return unsubscribe;
+  }, [navigation]);
+
+  async function obterEmailUsuarioSalvo() {
+    const emailAtual = await AsyncStorage.getItem("@eleve:email_usuario");
+    if (emailAtual) {
+      return emailAtual;
+    }
+
+    const emailLegado = await AsyncStorage.getItem("@eleve:email");
+    if (emailLegado) {
+      await AsyncStorage.setItem("@eleve:email_usuario", emailLegado);
+      return emailLegado;
+    }
+
+    return "";
+  }
+
+  async function carregarDadosUsuario() {
+    try {
+      const clienteId = await obterOuSincronizarClienteId();
+      const dadosCliente = await buscarClientePorId(clienteId);
+
+      const rua = dadosCliente.rua || "";
+      const num = dadosCliente.numEndereco || "";
+      const endereco =
+        rua && num ? `${rua}, ${num}` : rua || num || "Endereço não informado";
+
+      const emailSalvo = (await obterEmailUsuarioSalvo()) || dadosCliente.email || "";
+
+      setUsuario({
+        nome: dadosCliente.nome || "Usuário",
+        email: emailSalvo,
+        telefone: dadosCliente.telefone
+          ? formatarTelefone(dadosCliente.telefone)
+          : "",
+        endereco,
+      });
+
+      const petsDoCliente = await listarPetsPorClienteSimples(clienteId);
+      if (petsDoCliente && petsDoCliente.length > 0) {
+        setPets(
+          petsDoCliente.map((pet) => ({
+            id: pet.id,
+            nome: pet.nome || "Pet",
+            raca: pet.raca?.nome || "Não informada",
+            sexo: pet.sexo || "Não informado",
+            porte: pet.porte?.nome || "Não informado",
+            foto: pet.foto || null,
+          }))
+        );
+      } else {
+        setPets([]);
+      }
+    } catch (erro) {
+      console.error("Erro ao carregar dados do usuário:", erro);
+    }
+  }
+
+  function formatarTelefone(telefone) {
+    const n = telefone.replace(/\D/g, "");
+    if (n.length === 11) return `(${n.slice(0, 2)}) ${n.slice(2, 7)}-${n.slice(7)}`;
+    return telefone;
+  }
 
   function abrirEditarPerfil() {
-    setMenuVisivel(false);
     setEditUser({ ...usuario });
     setEditUserVisivel(true);
   }
 
-  function abrirEditarPet() {
-    setMenuVisivel(false);
-    if (pets.length === 1) {
-      setPetEditIndex(0);
-      setEditPet({ ...pets[0] });
-      setEditPetVisivel(true);
-    } else {
-      setSelectPetVisivel(true);
+  async function salvarUsuario() {
+    const emailAtualizado = String(editUser.email || "").trim();
+    if (emailAtualizado) {
+      await AsyncStorage.setItem("@eleve:email_usuario", emailAtualizado);
     }
-  }
 
-  function selecionarPetParaEditar(index) {
-    setSelectPetVisivel(false);
-    setPetEditIndex(index);
-    setEditPet({ ...pets[index] });
-    setEditPetVisivel(true);
-  }
-
-  function adicionarNovoPet() {
-    setMenuVisivel(false);
-    const novoPet = {
-      nome: "",
-      raca: "",
-      sexo: "",
-      porte: "",
-      foto: null,
-    };
-    setPets((prev) => [...prev, novoPet]);
-    setPetEditIndex(pets.length);
-    setEditPet(novoPet);
-    setEditPetVisivel(true);
-  }
-
-  function salvarUsuario() {
     setUsuario({ ...editUser });
     setEditUserVisivel(false);
   }
 
-  function salvarPet() {
-    setPets((prev) => {
-      const updated = [...prev];
-      updated[petEditIndex] = { ...editPet };
-      return updated;
-    });
-    setEditPetVisivel(false);
+  function irParaCadastroPet() {
+    navigation.navigate("PetRegistration", { fromPerfil: true });
   }
 
   async function realizarLogout() {
     try {
-      // Faz a requisição para invalidar o token no backend
-      await enviarRequisicaoHttp({
-        metodo: "POST",
-        endpoint: "/usuarios/logout"
-      });
-
-      // Apaga todos os dados armazenados localmente
+      await enviarRequisicaoHttp({ metodo: "POST", endpoint: "/usuarios/logout" });
       await AsyncStorage.clear();
-
-      // Redireciona para a tela de Login e limpa o histórico de navegação
-      navigation.reset({
-        index: 0,
-        routes: [{ name: "Login" }],
-      });
+      navigation.reset({ index: 0, routes: [{ name: "Login" }] });
     } catch (erro) {
       console.error("Erro ao realizar logout:", erro);
-      Alert.alert("Erro", "Não foi possível realizar o logout. Tente novamente.");
+      Alert.alert("Erro", "Não foi possível realizar o logout.");
     }
   }
+
+  const primeiroNome = usuario.nome.trim().split(" ")[0];
 
   return (
     <View style={[styles.tela, { paddingTop: insets.top }]}>
       <StatusBar style="dark" />
 
+      {/* Header */}
       <View style={styles.header}>
         <Text style={styles.titulo}>Seu Perfil</Text>
         <View style={styles.headerIcons}>
-          <TouchableOpacity
-            activeOpacity={0.7}
-            onPress={() => setMenuVisivel(true)}
-          >
+          <TouchableOpacity activeOpacity={0.7} onPress={abrirEditarPerfil}>
             <Text style={styles.pencilEmoji}>✏️</Text>
           </TouchableOpacity>
-          
-          {/* NOVO ÍCONE DE LOGOUT E AÇÃO DE CLIQUE */}
-          <TouchableOpacity
-            activeOpacity={0.7}
-            onPress={realizarLogout}
-          >
+          <TouchableOpacity activeOpacity={0.7} onPress={realizarLogout}>
             <FontAwesome name="sign-out" size={26} color={COLORS.primaryMedium} />
           </TouchableOpacity>
         </View>
@@ -227,6 +175,7 @@ export default function PerfilScreen({ navigation, route }) {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
+        {/* Card do Usuário */}
         <View style={styles.userCard}>
           <View style={styles.avatarContainer}>
             <View style={styles.avatarCircle}>
@@ -237,143 +186,83 @@ export default function PerfilScreen({ navigation, route }) {
 
           <View style={styles.infoRow}>
             <Text style={styles.infoEmoji}>📧</Text>
-            <Text style={styles.infoText}>{usuario.email}</Text>
+            <Text style={styles.infoText}>{usuario.email || "—"}</Text>
           </View>
           <View style={styles.divider} />
           <View style={styles.infoRow}>
             <Text style={styles.infoEmoji}>🏠</Text>
-            <Text style={styles.infoText}>{usuario.endereco}</Text>
+            <Text style={styles.infoText}>{usuario.endereco || "—"}</Text>
           </View>
           <View style={styles.divider} />
           <View style={styles.infoRow}>
             <Text style={styles.infoEmoji}>📞</Text>
-            <Text style={styles.infoText}>{usuario.telefone}</Text>
+            <Text style={styles.infoText}>{usuario.telefone || "—"}</Text>
           </View>
         </View>
 
         {/* Cards dos Pets */}
-        {pets.map((pet, idx) => (
-          <View key={idx} style={styles.petCard}>
-            <View style={styles.petHeader}>
-              <View>
-                <Text style={styles.petCardTitle}>
-                  {pets.length > 1 ? `Pet ${idx + 1}` : "Perfil do"}
-                </Text>
-                <Text style={styles.petCardTitle}>
-                  {pets.length > 1 ? pet.nome : "Seu Pet"}
-                </Text>
-              </View>
-              {pet.foto ? (
-                <Image source={{ uri: pet.foto }} style={styles.petPhoto} />
-              ) : (
-                <View style={styles.petPhotoPlaceholder}>
-                  <FontAwesome name="paw" size={28} color={COLORS.primary} />
-                </View>
-              )}
-            </View>
-
-            <View style={styles.petInfoGrid}>
-              <View style={styles.petInfoItem}>
-                <Text style={styles.petInfoLabel}>Nome</Text>
-                <Text style={styles.petInfoValue}>{pet.nome}</Text>
-              </View>
-              <View style={styles.petInfoItem}>
-                <Text style={styles.petInfoLabel}>Raça</Text>
-                <Text style={styles.petInfoValue}>{pet.raca}</Text>
-              </View>
-              <View style={styles.petInfoItem}>
-                <Text style={styles.petInfoLabel}>Sexo</Text>
-                <Text style={styles.petInfoValue}>{pet.sexo}</Text>
-              </View>
-              <View style={styles.petInfoItem}>
-                <Text style={styles.petInfoLabel}>Porte</Text>
-                <Text style={styles.petInfoValue}>{pet.porte}</Text>
-              </View>
-            </View>
+        {pets.length === 0 ? (
+          <View style={styles.emptyPetCard}>
+            <FontAwesome name="paw" size={36} color={COLORS.accent} />
+            <Text style={styles.emptyPetText}>Nenhum pet cadastrado ainda</Text>
           </View>
-        ))}
+        ) : (
+          pets.map((pet, idx) => (
+            <View key={pet.id ?? idx} style={styles.petCard}>
+              <View style={styles.petHeader}>
+                <View>
+                  <Text style={styles.petCardTitle}>
+                    {pets.length > 1 ? `Pet ${idx + 1}` : "Perfil do"}
+                  </Text>
+                  <Text style={styles.petCardTitle}>
+                    {pets.length > 1 ? pet.nome : "Seu Pet"}
+                  </Text>
+                </View>
+                {pet.foto ? (
+                  <Image source={{ uri: pet.foto }} style={styles.petPhoto} />
+                ) : (
+                  <View style={styles.petPhotoPlaceholder}>
+                    <FontAwesome name="paw" size={28} color={COLORS.primary} />
+                  </View>
+                )}
+              </View>
+
+              <View style={styles.petInfoGrid}>
+                <View style={styles.petInfoItem}>
+                  <Text style={styles.petInfoLabel}>Nome</Text>
+                  <Text style={styles.petInfoValue}>{pet.nome}</Text>
+                </View>
+                <View style={styles.petInfoItem}>
+                  <Text style={styles.petInfoLabel}>Raça</Text>
+                  <Text style={styles.petInfoValue}>{pet.raca}</Text>
+                </View>
+                <View style={styles.petInfoItem}>
+                  <Text style={styles.petInfoLabel}>Sexo</Text>
+                  <Text style={styles.petInfoValue}>{pet.sexo}</Text>
+                </View>
+                <View style={styles.petInfoItem}>
+                  <Text style={styles.petInfoLabel}>Porte</Text>
+                  <Text style={styles.petInfoValue}>{pet.porte}</Text>
+                </View>
+              </View>
+            </View>
+          ))
+        )}
+
+        {/* Botão Cadastrar Novo Pet */}
+        <TouchableOpacity
+          style={styles.addPetButton}
+          activeOpacity={0.8}
+          onPress={irParaCadastroPet}
+        >
+          <FontAwesome name="plus-circle" size={22} color={COLORS.primary} />
+          <Text style={styles.addPetButtonText}>+ Cadastrar Novo Pet</Text>
+        </TouchableOpacity>
+
+        <View style={{ height: 20 }} />
       </ScrollView>
 
-      {/* Modal Menu */}
-      <Modal
-        visible={menuVisivel}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setMenuVisivel(false)}
-      >
-        <TouchableOpacity
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={() => setMenuVisivel(false)}
-        >
-          <View style={styles.menuContent}>
-            <TouchableOpacity
-              style={styles.menuClose}
-              onPress={() => setMenuVisivel(false)}
-            >
-              <FontAwesome name="close" size={18} color={COLORS.gray} />
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.menuButton}
-              activeOpacity={0.8}
-              onPress={abrirEditarPerfil}
-            >
-              <Text style={styles.menuButtonText}>Editar Seu Perfil</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.menuButton}
-              activeOpacity={0.8}
-              onPress={abrirEditarPet}
-            >
-              <Text style={styles.menuButtonText}>
-                Editar Perfil do Seu Pet
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.menuButton}
-              activeOpacity={0.8}
-              onPress={adicionarNovoPet}
-            >
-              <Text style={styles.menuButtonText}>Adicionar Novo Pet</Text>
-            </TouchableOpacity>
-          </View>
-        </TouchableOpacity>
-      </Modal>
-
-      {/* Modal Selecionar Pet */}
-      <Modal
-        visible={selectPetVisivel}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setSelectPetVisivel(false)}
-      >
-        <TouchableOpacity
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={() => setSelectPetVisivel(false)}
-        >
-          <View style={styles.menuContent}>
-            <Text style={styles.editTitle}>Qual pet deseja editar?</Text>
-            {pets.map((pet, idx) => (
-              <TouchableOpacity
-                key={idx}
-                style={styles.menuButton}
-                activeOpacity={0.8}
-                onPress={() => selecionarPetParaEditar(idx)}
-              >
-                <Text style={styles.menuButtonText}>
-                  {pet.nome || `Pet ${idx + 1}`}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </TouchableOpacity>
-      </Modal>
-
-      {/* Modal Editar Usuário */}
+      {/* Modal Editar Perfil */}
       <Modal
         visible={editUserVisivel}
         transparent
@@ -391,18 +280,14 @@ export default function PerfilScreen({ navigation, route }) {
               <ModalInput
                 label="Nome"
                 value={editUser.nome}
-                onChangeText={(v) =>
-                  setEditUser((p) => ({ ...p, nome: v }))
-                }
+                onChangeText={(v) => setEditUser((p) => ({ ...p, nome: v }))}
                 placeholder="Seu nome"
                 autoCapitalize="words"
               />
               <ModalInput
                 label="E-mail"
                 value={editUser.email}
-                onChangeText={(v) =>
-                  setEditUser((p) => ({ ...p, email: v }))
-                }
+                onChangeText={(v) => setEditUser((p) => ({ ...p, email: v }))}
                 placeholder="email@exemplo.com"
                 keyboardType="email-address"
               />
@@ -442,75 +327,6 @@ export default function PerfilScreen({ navigation, route }) {
           </View>
         </KeyboardAvoidingView>
       </Modal>
-
-      {/* Modal Editar Pet */}
-      <Modal
-        visible={editPetVisivel}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setEditPetVisivel(false)}
-      >
-        <KeyboardAvoidingView
-          style={styles.editOverlay}
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-        >
-          <View style={styles.editContent}>
-            <Text style={styles.editTitle}>
-              {editPet.nome
-                ? `Editar ${editPet.nome}`
-                : "Novo Pet"}
-            </Text>
-
-            <ScrollView showsVerticalScrollIndicator={false}>
-              <ModalInput
-                label="Nome do Pet"
-                value={editPet.nome}
-                onChangeText={(v) =>
-                  setEditPet((p) => ({ ...p, nome: v }))
-                }
-                placeholder="Ex: Caramelo"
-                autoCapitalize="words"
-              />
-              <ModalInput
-                label="Raça"
-                value={editPet.raca}
-                onChangeText={(v) =>
-                  setEditPet((p) => ({ ...p, raca: v }))
-                }
-                placeholder="Ex: Labrador"
-                autoCapitalize="words"
-              />
-              <ModalSelectionGroup
-                label="Sexo"
-                opcoes={OPCOES_SEXO}
-                valor={editPet.sexo}
-                onChange={(v) => setEditPet((p) => ({ ...p, sexo: v }))}
-              />
-              <ModalSelectionGroup
-                label="Porte"
-                opcoes={OPCOES_PORTE}
-                valor={editPet.porte}
-                onChange={(v) => setEditPet((p) => ({ ...p, porte: v }))}
-              />
-            </ScrollView>
-
-            <View style={styles.editButtonRow}>
-              <TouchableOpacity
-                style={styles.editCancelBtn}
-                onPress={() => setEditPetVisivel(false)}
-              >
-                <Text style={styles.editCancelText}>Cancelar</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.editSaveBtn}
-                onPress={salvarPet}
-              >
-                <Text style={styles.editSaveText}>Salvar</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </KeyboardAvoidingView>
-      </Modal>
     </View>
   );
 }
@@ -541,9 +357,7 @@ const styles = StyleSheet.create({
   pencilEmoji: {
     fontSize: 22,
   },
-  scroll: {
-    flex: 1,
-  },
+  scroll: { flex: 1 },
   scrollContent: {
     paddingHorizontal: SPACING.lg,
     paddingTop: 14,
@@ -588,18 +402,33 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.sm,
     marginBottom: 2,
   },
-  infoEmoji: {
-    fontSize: 20,
-    marginRight: 14,
-  },
+  infoEmoji: { fontSize: 20, marginRight: 14 },
   infoText: {
     fontSize: 15,
     fontFamily: FONTS.regular,
     color: COLORS.gray,
     flex: 1,
   },
-  divider: {
-    height: 6,
+  divider: { height: 6 },
+  // Empty state
+  emptyPetCard: {
+    backgroundColor: COLORS.white,
+    borderRadius: RADIUS.md,
+    padding: 32,
+    marginBottom: 16,
+    alignItems: "center",
+    gap: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
+    elevation: 3,
+  },
+  emptyPetText: {
+    fontSize: 15,
+    fontFamily: FONTS.regular,
+    color: COLORS.gray,
+    textAlign: "center",
   },
   // Pet Card
   petCard: {
@@ -663,43 +492,26 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.regular,
     color: COLORS.dark,
   },
-  // Menu Modal
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.45)",
+  // Add Pet Button
+  addPetButton: {
+    flexDirection: "row",
+    alignItems: "center",
     justifyContent: "center",
-    alignItems: "center",
-  },
-  menuContent: {
     backgroundColor: COLORS.white,
+    borderWidth: 2,
+    borderColor: COLORS.primary,
+    borderStyle: "dashed",
     borderRadius: RADIUS.md,
-    paddingHorizontal: 30,
-    paddingTop: 40,
-    paddingBottom: 30,
-    width: SCREEN_WIDTH * 0.82,
-    alignItems: "center",
+    paddingVertical: 18,
+    marginTop: 4,
+    gap: 10,
   },
-  menuClose: {
-    position: "absolute",
-    top: 14,
-    right: 16,
-    padding: 6,
-  },
-  menuButton: {
-    backgroundColor: COLORS.primary,
-    borderRadius: RADIUS.sm,
-    paddingVertical: 15,
-    paddingHorizontal: 24,
-    width: "100%",
-    alignItems: "center",
-    marginBottom: 14,
-  },
-  menuButtonText: {
+  addPetButtonText: {
     fontSize: 16,
     fontFamily: FONTS.bold,
-    color: COLORS.white,
+    color: COLORS.primary,
   },
-  // Edit Modals
+  // Edit Modal
   editOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.45)",
@@ -752,10 +564,7 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.bold,
     color: COLORS.white,
   },
-  // Modal Inputs
-  modalInputWrapper: {
-    marginBottom: 14,
-  },
+  modalInputWrapper: { marginBottom: 14 },
   modalInputLabel: {
     fontSize: 12,
     fontFamily: FONTS.bold,
@@ -774,30 +583,5 @@ const styles = StyleSheet.create({
     color: COLORS.dark,
     borderWidth: 1.5,
     borderColor: "rgba(0,0,0,0.08)",
-  },
-  modalSelectionRow: {
-    flexDirection: "row",
-    gap: 10,
-  },
-  modalSelectionBtn: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 12,
-    alignItems: "center",
-    backgroundColor: COLORS.background,
-    borderWidth: 1.5,
-    borderColor: "rgba(0,0,0,0.08)",
-  },
-  modalSelectionBtnActive: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
-  },
-  modalSelectionText: {
-    fontSize: 14,
-    fontFamily: FONTS.bold,
-    color: COLORS.gray,
-  },
-  modalSelectionTextActive: {
-    color: COLORS.white,
   },
 });

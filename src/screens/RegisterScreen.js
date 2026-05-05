@@ -1,5 +1,6 @@
 import React, { useMemo, useRef, useState } from "react";
 import { Text, ScrollView, StyleSheet, View, TouchableOpacity } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import SafeScreen from "../components/common/SafeScreen";
 import Input from "../components/common/Input";
 import Button from "../components/common/Button";
@@ -145,13 +146,17 @@ export default function RegisterScreen({ navigation }) {
         senha: campos.senha,
       });
 
+      if (!token) {
+        throw new Error("Não foi possível autenticar. Tente novamente.");
+      }
+
       const rua = campos.endereco?.trim() || null;
       const numEndereco = campos.numEndereco?.trim() || null;
       const bairro = campos.bairro?.trim() || null;
       const cidade = campos.cidade?.trim() || null;
       const complemento = campos.complemento?.trim() || null;
 
-      await cadastrarCliente({
+      const clienteCriado = await cadastrarCliente({
         nome: campos.nome,
         telefone: campos.telefone.replace(/\D/g, ""),
         cep: campos.cep.replace(/\D/g, ""),
@@ -163,8 +168,24 @@ export default function RegisterScreen({ navigation }) {
         tokenAcesso: token,
       });
 
-      navigation.replace("Login", {
+      await AsyncStorage.setItem("@eleve:token_acesso", token);
+      await AsyncStorage.setItem("@eleve:email_usuario", campos.email);
+      await AsyncStorage.setItem("@eleve:nome_usuario", campos.nome);
+
+      if (clienteCriado?.id) {
+        await AsyncStorage.setItem("@eleve:cliente_id", String(clienteCriado.id));
+      } else {
+        await AsyncStorage.removeItem("@eleve:cliente_id");
+      }
+
+      // Redireciona para o cadastro de pet ao invés de voltar para Login
+      navigation.replace("PetRegistration", {
+        nomeUsuario: campos.nome,
         email: campos.email,
+        telefone: campos.telefone,
+        endereco: campos.endereco,
+        cep: campos.cep,
+        token: token,
       });
     } catch (e) {
       setErroServidor(obterMensagemAmigavel(e));

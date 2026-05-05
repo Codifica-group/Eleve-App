@@ -3,6 +3,7 @@ import { Image, Animated, StyleSheet } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import SafeScreen from "../components/common/SafeScreen";
 import { COLORS } from "../constants/theme";
+import { resolverAcessoPosLogin } from "../api/compartilhado/posLogin";
 
 const LOADING_DURATION = 3000;
 const ONBOARDING_SEEN_KEY = "@eleve:onboarding_seen";
@@ -14,6 +15,7 @@ export default function LoadingScreen({ navigation }) {
 
   useEffect(() => {
     let isActive = true;
+    let timerId = null;
 
     Animated.parallel([
       Animated.timing(fadeAnim, {
@@ -39,23 +41,68 @@ export default function LoadingScreen({ navigation }) {
 
       const onboardingSeen = onboardingVal === "true";
 
-      const timer = setTimeout(() => {
+      timerId = setTimeout(async () => {
         if (!isActive) return;
 
         if (onboardingSeen && tokenVal) {
-          navigation.reset({
-            index: 0,
-            routes: [
-              {
-                name: "Home",
-                params: {
-                  tokenAcesso: tokenVal,
-                  email: emailVal || "",
-                  nomeUsuario: nomeVal || "Usuário",
+          try {
+            if (!emailVal) {
+              throw new Error("Sessão incompleta.");
+            }
+
+            const acesso = await resolverAcessoPosLogin({
+              email: emailVal,
+              tokenAcesso: tokenVal,
+            });
+
+            if (!acesso.temCliente || !acesso.clienteId) {
+              throw new Error("Cadastro de cliente não localizado.");
+            }
+
+            await AsyncStorage.setItem("@eleve:cliente_id", String(acesso.clienteId));
+
+            if (!acesso.temPet) {
+              navigation.reset({
+                index: 0,
+                routes: [
+                  {
+                    name: "PetRegistration",
+                    params: {
+                      nomeUsuario: acesso.nomeUsuario || nomeVal || "Usuário",
+                      email: emailVal,
+                      token: tokenVal,
+                    },
+                  },
+                ],
+              });
+              return;
+            }
+
+            navigation.reset({
+              index: 0,
+              routes: [
+                {
+                  name: "Home",
+                  params: {
+                    tokenAcesso: tokenVal,
+                    email: emailVal,
+                    nomeUsuario: acesso.nomeUsuario || nomeVal || "Usuário",
+                  },
                 },
-              },
-            ],
-          });
+              ],
+            });
+          } catch {
+            await AsyncStorage.multiRemove([
+              TOKEN_KEY,
+              "@eleve:email_usuario",
+              "@eleve:nome_usuario",
+              "@eleve:cliente_id",
+            ]);
+
+            if (isActive) {
+              navigation.replace("Login");
+            }
+          }
         } 
         else if (onboardingSeen) {
           navigation.replace("Login");
@@ -73,6 +120,9 @@ export default function LoadingScreen({ navigation }) {
 
     return () => {
       isActive = false;
+      if (timerId) {
+        clearTimeout(timerId);
+      }
     };
   }, [navigation]);
 

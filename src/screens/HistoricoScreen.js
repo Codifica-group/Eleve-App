@@ -90,7 +90,26 @@ export default function HistoricoScreen({ navigation, route }) {
         throw new Error("Erro ao buscar histórico.");
       }
 
-      const json = await response.json();
+      // Valida se a resposta tem conteúdo antes de fazer parse
+      const responseText = await response.text();
+      
+      if (!responseText || responseText.trim() === "") {
+        console.warn("API retornou resposta vazia");
+        setAtendimentos([]);
+        setTotalPaginas(1);
+        return;
+      }
+
+      let json;
+      try {
+        json = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error("Erro ao fazer parse da resposta JSON:", parseError, "Resposta:", responseText);
+        setAtendimentos([]);
+        setTotalPaginas(1);
+        return;
+      }
+
       setAtendimentos(json.dados || []);
       setTotalPaginas(json.totalPaginas > 0 ? json.totalPaginas : 1);
 

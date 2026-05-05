@@ -22,8 +22,14 @@ import { enviarRequisicaoHttp } from "../api/compartilhado/clienteHttp";
 import { buscarClientePorId } from "../api/clientes/cadastrarCliente";
 import { obterOuSincronizarClienteId } from "../api/clientes/sincronizarCliente";
 import { listarPetsPorClienteSimples } from "../api/pets/listarPetsPorCliente";
+import { extrairEmailDoToken } from "../utils/tokenJwt";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
+const EMAIL_KEY = "@eleve:email_usuario";
+const EMAIL_LEGADO_KEY = "@eleve:email";
+const TELEFONE_KEY = "@eleve:telefone_usuario";
+const ENDERECO_KEY = "@eleve:endereco_usuario";
+const TOKEN_KEY = "@eleve:token_acesso";
 
 function ModalInput({ label, value, onChangeText, ...props }) {
   return (
@@ -59,40 +65,102 @@ export default function PerfilScreen({ navigation }) {
     return unsubscribe;
   }, [navigation]);
 
-  async function obterEmailUsuarioSalvo() {
-    const emailAtual = await AsyncStorage.getItem("@eleve:email_usuario");
-    if (emailAtual) {
-      return emailAtual;
+  function normalizarValorSalvo(valor) {
+    const texto = String(valor ?? "").trim();
+    if (!texto || texto === "undefined" || texto === "null") {
+      return "";
+    }
+    return texto;
+  }
+
+  function montarEnderecoCliente(dadosCliente) {
+    const rua = normalizarValorSalvo(dadosCliente?.rua);
+    const numero = normalizarValorSalvo(dadosCliente?.numEndereco);
+    const bairro = normalizarValorSalvo(dadosCliente?.bairro);
+    const cidade = normalizarValorSalvo(dadosCliente?.cidade);
+
+    const linhaPrincipal = [rua, numero].filter(Boolean).join(", ");
+    const linhaSecundaria = [bairro, cidade].filter(Boolean).join(" • ");
+
+    return [linhaPrincipal, linhaSecundaria].filter(Boolean).join(" · ");
+  }
+
+  async function obterPerfilLocalSalvo() {
+    const pares = await AsyncStorage.multiGet([
+      EMAIL_KEY,
+      EMAIL_LEGADO_KEY,
+      TELEFONE_KEY,
+      ENDERECO_KEY,
+      TOKEN_KEY,
+    ]);
+
+    const dados = Object.fromEntries(pares);
+    const emailSalvo =
+      normalizarValorSalvo(dados[EMAIL_KEY]) ||
+      normalizarValorSalvo(dados[EMAIL_LEGADO_KEY]) ||
+      extrairEmailDoToken(dados[TOKEN_KEY]);
+
+    if (emailSalvo) {
+      await AsyncStorage.setItem(EMAIL_KEY, emailSalvo);
     }
 
-    const emailLegado = await AsyncStorage.getItem("@eleve:email");
-    if (emailLegado) {
-      await AsyncStorage.setItem("@eleve:email_usuario", emailLegado);
-      return emailLegado;
+    return {
+      email: emailSalvo,
+      telefone: normalizarValorSalvo(dados[TELEFONE_KEY]),
+      endereco: normalizarValorSalvo(dados[ENDERECO_KEY]),
+    };
+  }
+
+  async function salvarPerfilLocal({ email, telefone, endereco }) {
+    const operacoes = [];
+    const chavesParaRemover = [];
+    const emailNormalizado = normalizarValorSalvo(email);
+    const telefoneNormalizado = normalizarValorSalvo(telefone);
+    const enderecoNormalizado = normalizarValorSalvo(endereco);
+
+    if (emailNormalizado) operacoes.push([EMAIL_KEY, emailNormalizado]);
+    else chavesParaRemover.push(EMAIL_KEY);
+
+    if (telefoneNormalizado) operacoes.push([TELEFONE_KEY, telefoneNormalizado]);
+    else chavesParaRemover.push(TELEFONE_KEY);
+
+    if (enderecoNormalizado) operacoes.push([ENDERECO_KEY, enderecoNormalizado]);
+    else chavesParaRemover.push(ENDERECO_KEY);
+
+    if (operacoes.length) {
+      await AsyncStorage.multiSet(operacoes);
     }
 
-    return "";
+    if (chavesParaRemover.length) {
+      await AsyncStorage.multiRemove(chavesParaRemover);
+    }
   }
 
   async function carregarDadosUsuario() {
+    const perfilLocal = await obterPerfilLocalSalvo();
+
     try {
       const clienteId = await obterOuSincronizarClienteId();
       const dadosCliente = await buscarClientePorId(clienteId);
 
-      const rua = dadosCliente.rua || "";
-      const num = dadosCliente.numEndereco || "";
-      const endereco =
-        rua && num ? `${rua}, ${num}` : rua || num || "Endereço não informado";
-
-      const emailSalvo = (await obterEmailUsuarioSalvo()) || dadosCliente.email || "";
+      const enderecoCliente = montarEnderecoCliente(dadosCliente);
+      const enderecoFinal = enderecoCliente || perfilLocal.endereco;
+      const telefoneFinal = dadosCliente.telefone
+        ? formatarTelefone(dadosCliente.telefone)
+        : perfilLocal.telefone;
+      const emailFinal = perfilLocal.email || normalizarValorSalvo(dadosCliente.email);
 
       setUsuario({
         nome: dadosCliente.nome || "Usuário",
-        email: emailSalvo,
-        telefone: dadosCliente.telefone
-          ? formatarTelefone(dadosCliente.telefone)
-          : "",
-        endereco,
+        email: emailFinal,
+        telefone: telefoneFinal,
+        endereco: enderecoFinal || "Endereço não informado",
+      });
+
+      await salvarPerfilLocal({
+        email: emailFinal,
+        telefone: telefoneFinal,
+        endereco: enderecoFinal,
       });
 
       const petsDoCliente = await listarPetsPorClienteSimples(clienteId);
@@ -112,13 +180,19 @@ export default function PerfilScreen({ navigation }) {
       }
     } catch (erro) {
       console.error("Erro ao carregar dados do usuário:", erro);
+      setUsuario((anterior) => ({
+        nome: anterior.nome || "Usuário",
+        email: perfilLocal.email || anterior.email,
+        telefone: perfilLocal.telefone || anterior.telefone,
+        endereco: perfilLocal.endereco || anterior.endereco,
+      }));
     }
   }
 
   function formatarTelefone(telefone) {
-    const n = telefone.replace(/\D/g, "");
+    const n = String(telefone || "").replace(/\D/g, "");
     if (n.length === 11) return `(${n.slice(0, 2)}) ${n.slice(2, 7)}-${n.slice(7)}`;
-    return telefone;
+    return String(telefone || "");
   }
 
   function abrirEditarPerfil() {
@@ -127,12 +201,22 @@ export default function PerfilScreen({ navigation }) {
   }
 
   async function salvarUsuario() {
-    const emailAtualizado = String(editUser.email || "").trim();
-    if (emailAtualizado) {
-      await AsyncStorage.setItem("@eleve:email_usuario", emailAtualizado);
-    }
+    const emailAtualizado = normalizarValorSalvo(editUser.email);
+    const telefoneAtualizado = normalizarValorSalvo(editUser.telefone);
+    const enderecoAtualizado = normalizarValorSalvo(editUser.endereco);
 
-    setUsuario({ ...editUser });
+    await salvarPerfilLocal({
+      email: emailAtualizado,
+      telefone: telefoneAtualizado,
+      endereco: enderecoAtualizado,
+    });
+
+    setUsuario({
+      ...editUser,
+      email: emailAtualizado,
+      telefone: telefoneAtualizado,
+      endereco: enderecoAtualizado,
+    });
     setEditUserVisivel(false);
   }
 

@@ -4,6 +4,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import SafeScreen from "../components/common/SafeScreen";
 import { COLORS } from "../constants/theme";
 import { resolverAcessoPosLogin } from "../api/compartilhado/posLogin";
+import { extrairEmailDoToken } from "../utils/tokenJwt";
 
 const LOADING_DURATION = 3000;
 const ONBOARDING_SEEN_KEY = "@eleve:onboarding_seen";
@@ -40,18 +41,23 @@ export default function LoadingScreen({ navigation }) {
       if (!isActive) return;
 
       const onboardingSeen = onboardingVal === "true";
+      const emailRecuperado = emailVal || extrairEmailDoToken(tokenVal);
 
       timerId = setTimeout(async () => {
         if (!isActive) return;
 
         if (onboardingSeen && tokenVal) {
           try {
-            if (!emailVal) {
+            if (!emailRecuperado) {
               throw new Error("Sessão incompleta.");
             }
 
+            if (!emailVal && emailRecuperado) {
+              await AsyncStorage.setItem("@eleve:email_usuario", emailRecuperado);
+            }
+
             const acesso = await resolverAcessoPosLogin({
-              email: emailVal,
+              email: emailRecuperado,
               tokenAcesso: tokenVal,
             });
 
@@ -69,7 +75,7 @@ export default function LoadingScreen({ navigation }) {
                     name: "PetRegistration",
                     params: {
                       nomeUsuario: acesso.nomeUsuario || nomeVal || "Usuário",
-                      email: emailVal,
+                      email: emailRecuperado,
                       token: tokenVal,
                     },
                   },
@@ -85,7 +91,7 @@ export default function LoadingScreen({ navigation }) {
                   name: "Home",
                   params: {
                     tokenAcesso: tokenVal,
-                    email: emailVal,
+                    email: emailRecuperado,
                     nomeUsuario: acesso.nomeUsuario || nomeVal || "Usuário",
                   },
                 },

@@ -86,13 +86,16 @@ export default function LoginScreen({ navigation, route }) {
         throw new Error("Não foi possível autenticar. Tente novamente.");
       }
 
+      const emailUsuario = response.usuario?.email || campos.email;
+      const nomeUsuario = response.usuario?.nome || "";
+
       await AsyncStorage.removeItem('@eleve:cliente_id');
       await AsyncStorage.setItem('@eleve:token_acesso', response.token);
-      await AsyncStorage.setItem('@eleve:email_usuario', response.usuario?.email);
-      await AsyncStorage.setItem('@eleve:nome_usuario', response.usuario?.nome);
+      await AsyncStorage.setItem('@eleve:email_usuario', emailUsuario);
+      await AsyncStorage.setItem('@eleve:nome_usuario', nomeUsuario);
 
       const acesso = await resolverAcessoPosLogin({
-        email: response.usuario?.email || campos.email,
+        email: emailUsuario,
         tokenAcesso: response.token,
       });
 
@@ -110,8 +113,8 @@ export default function LoginScreen({ navigation, route }) {
             {
               name: "PetRegistration",
               params: {
-                nomeUsuario: acesso.nomeUsuario || response.usuario?.nome,
-                email: response.usuario?.email || campos.email,
+                nomeUsuario: acesso.nomeUsuario || nomeUsuario,
+                email: emailUsuario,
                 token: response.token,
               },
             },
@@ -125,13 +128,13 @@ export default function LoginScreen({ navigation, route }) {
         routes: [
           {
             name: "Home",
-            params: {
-              tokenAcesso: response.token,
-              email: campos.email,
-              nomeUsuario: response.usuario?.nome,
+              params: {
+                tokenAcesso: response.token,
+                email: emailUsuario,
+                nomeUsuario,
+              },
             },
-          },
-        ],
+          ],
       });
     } catch (e) {
       await limparSessaoParcial();

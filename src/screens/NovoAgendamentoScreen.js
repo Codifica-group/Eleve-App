@@ -28,6 +28,7 @@ export default function NovoAgendamentoScreen({ route, navigation }) {
   const [horarios, setHorarios] = useState([]);
   const [selectedTime, setSelectedTime] = useState("");
   const [mensagemErroHorario, setMensagemErroHorario] = useState("");
+  const [carregandoHorarios, setCarregandoHorarios] = useState(false);
 
   const [isAtStart, setIsAtStart] = useState(true);
   const [isAtEnd, setIsAtEnd] = useState(false);
@@ -104,6 +105,7 @@ export default function NovoAgendamentoScreen({ route, navigation }) {
     setHorarios([]);
     setSelectedTime("");
     setMensagemErroHorario("");
+    setCarregandoHorarios(true);
 
     const dataFormatada = dataSelecionada.toISOString().split("T")[0];
     try {
@@ -122,6 +124,8 @@ export default function NovoAgendamentoScreen({ route, navigation }) {
     } catch (error) {
       console.log("Erro ao buscar disponibilidades:", error);
       setMensagemErroHorario("Erro ao procurar horários. Tente novamente.");
+    } finally {
+      setCarregandoHorarios(false);
     }
   };
 
@@ -161,9 +165,28 @@ export default function NovoAgendamentoScreen({ route, navigation }) {
     setIsAtEnd(layoutMeasurement.width + contentOffset.x >= contentSize.width - 20);
   };
 
+  const temHorariosDisponiveis = horarios.length > 0 && !mensagemErroHorario;
+  const horarioSelecionadoValido = Boolean(selectedTime) && horarios.includes(selectedTime);
+  const podeSolicitarAgendamento =
+    Boolean(selectedPet) &&
+    selectedServices.length > 0 &&
+    temHorariosDisponiveis &&
+    horarioSelecionadoValido &&
+    !carregandoHorarios;
+
   const agendar = async () => {
-    if (!selectedPet || selectedServices.length === 0 || !selectedTime) {
-      FeedbackManager.error("Preencha todas as informações (Pet, Serviço e Horário) para agendar.");
+    if (!selectedPet || selectedServices.length === 0) {
+      FeedbackManager.error("Preencha Pet e Serviço antes de solicitar o agendamento.");
+      return;
+    }
+
+    if (!temHorariosDisponiveis) {
+      FeedbackManager.error("Não há horários disponíveis para a data selecionada.");
+      return;
+    }
+
+    if (!horarioSelecionadoValido) {
+      FeedbackManager.error("Selecione um horário disponível para continuar.");
       return;
     }
 
@@ -255,7 +278,9 @@ export default function NovoAgendamentoScreen({ route, navigation }) {
 
           {/* Área dos Horários e Tratamento de Erros */}
           <View style={styles.horariosContainer}>
-            {mensagemErroHorario ? (
+            {carregandoHorarios ? (
+              <Text style={styles.horarioAjudaTexto}>Buscando horários disponíveis...</Text>
+            ) : mensagemErroHorario ? (
               <Text style={styles.erroTexto}>{mensagemErroHorario}</Text>
             ) : (
               <View>
@@ -295,7 +320,15 @@ export default function NovoAgendamentoScreen({ route, navigation }) {
           </View>
         </View>
 
-        <TouchableOpacity style={styles.btnAgendar} onPress={agendar}>
+        {!carregandoHorarios && temHorariosDisponiveis && !horarioSelecionadoValido ? (
+          <Text style={styles.horarioAjudaTexto}>Selecione um horário para habilitar a solicitação.</Text>
+        ) : null}
+
+        <TouchableOpacity
+          style={[styles.btnAgendar, !podeSolicitarAgendamento && styles.btnAgendarDisabled]}
+          onPress={podeSolicitarAgendamento ? agendar : undefined}
+          activeOpacity={podeSolicitarAgendamento ? 0.8 : 1}
+        >
           <Text style={styles.btnAgendarText}>Solicitar Agendamento</Text>
         </TouchableOpacity>
       </ScrollView>
@@ -338,6 +371,14 @@ const styles = StyleSheet.create({
   scrollArrowLeft: { left: -10 },
   scrollArrowRight: { right: -10 },
   btnAgendar: { margin: SPACING.lg, backgroundColor: COLORS.primaryDark, padding: 18, borderRadius: RADIUS.md, alignItems: "center" },
+  btnAgendarDisabled: { backgroundColor: COLORS.accent, opacity: 0.7 },
   btnAgendarText: { color: COLORS.white, fontFamily: FONTS.bold, fontSize: 16 },
   erroTexto: { fontFamily: FONTS.regular, color: COLORS.gray, textAlign: 'center', paddingVertical: 20 },
+  horarioAjudaTexto: {
+    fontFamily: FONTS.regular,
+    color: COLORS.primaryMedium,
+    textAlign: "center",
+    paddingHorizontal: SPACING.lg,
+    marginTop: 6,
+  },
 });

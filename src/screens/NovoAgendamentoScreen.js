@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Platform, TextInput } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
@@ -10,15 +10,32 @@ import ServiceAgendaCard from "../components/agenda/ServiceAgendaCard";
 import { SERVICOS } from "../constants/data";
 import { obterOuSincronizarClienteId } from "../api/clientes/sincronizarCliente";
 import { enviarRequisicaoHttp } from "../api/compartilhado/clienteHttp";
+import { resolverServicosAgendamento } from "../api/servicos/listarServicos";
 import FeedbackManager from "../utils/FeedbackManager";
 
 export default function NovoAgendamentoScreen({ route, navigation }) {
   const insets = useSafeAreaInsets();
   const servicoInicial = route?.params?.servicoInicial || null;
 
+  const normalizarServicoSelecionado = (valor) => {
+    if (valor === null || valor === undefined || valor === "") return null;
+
+    const servicoPorKey = SERVICOS.find((servico) => servico.key === valor);
+    if (servicoPorKey) return servicoPorKey.key;
+
+    const servicoPorId = SERVICOS.find((servico) => servico.id === valor);
+    if (servicoPorId) return servicoPorId.key;
+
+    return null;
+  };
+
+  const servicoInicialKey = normalizarServicoSelecionado(servicoInicial);
+
   const [pets, setPets] = useState([]);
   const [selectedPet, setSelectedPet] = useState(null);
-  const [selectedServices, setSelectedServices] = useState(servicoInicial ? [servicoInicial] : []);
+  const [selectedServices, setSelectedServices] = useState(
+    servicoInicialKey ? [servicoInicialKey] : []
+  );
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -71,7 +88,8 @@ export default function NovoAgendamentoScreen({ route, navigation }) {
 
       // Lida com o parâmetro de serviço inicial e o limpa para as próximas visitas
       if (route?.params?.servicoInicial) {
-        setSelectedServices([route.params.servicoInicial]);
+        const chaveServicoInicial = normalizarServicoSelecionado(route.params.servicoInicial);
+        setSelectedServices(chaveServicoInicial ? [chaveServicoInicial] : []);
         navigation.setParams({ servicoInicial: undefined });
       } else {
         setSelectedServices([]);
@@ -193,10 +211,14 @@ export default function NovoAgendamentoScreen({ route, navigation }) {
     try {
       const clienteId = await obterOuSincronizarClienteId();
       const dataFormatada = date.toISOString().split("T")[0];
+      const servicosResolvidos = await resolverServicosAgendamento(selectedServices);
       const payload = {
         chatId: clienteId,
         petId: selectedPet,
-        servicos: selectedServices.map((id) => ({ id, valor: 0.0 })),
+        servicos: servicosResolvidos.map((servico) => ({
+          id: servico.id,
+          valor: Number(servico.valor || 0),
+        })),
         valorDeslocamento: 0.0,
         dataHoraInicio: `${dataFormatada}T${selectedTime}`,
         dataHoraFim: "",
@@ -224,7 +246,11 @@ export default function NovoAgendamentoScreen({ route, navigation }) {
       navigation.navigate("HomeTab");
     } catch (error) {
       console.log("Erro ao agendar:", error);
-      FeedbackManager.error("Falha ao solicitar agendamento.");
+      const mensagem =
+        error?.message?.includes("Serviço não encontrado")
+          ? "Não foi possível localizar os serviços selecionados. Atualize a tela e tente novamente."
+          : "Falha ao solicitar agendamento.";
+      FeedbackManager.error(mensagem);
     }
   };
 
@@ -243,7 +269,7 @@ export default function NovoAgendamentoScreen({ route, navigation }) {
             <ServiceAgendaCard
               key={s.key}
               servico={s}
-              isSelected={selectedServices.includes(s.id)}
+              isSelected={selectedServices.includes(s.key)}
               onPress={toggleService}
             />
           ))}

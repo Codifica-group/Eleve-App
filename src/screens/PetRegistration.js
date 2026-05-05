@@ -35,7 +35,7 @@ const GRUPOS_TRADUZIDOS = {
   herding: "Pastoreio",
   "non-sporting": "Não esportivo",
   mixed: "Misto",
-  foundation stock service: "Serviço de base",
+  "foundation stock service": "Serviço de base",
 };
 const TEMPERAMENTOS_TRADUZIDOS = {
   eagertoplease: "dócil e disposto a agradar",
@@ -172,6 +172,7 @@ function traduzirTemperamento(valor) {
 export default function PetRegistrationScreen({ navigation, route }) {
   const { nomeUsuario, telefone, email, endereco, cep, fromPerfil, token: tokenRecebido } =
     route.params || {};
+  const imagemSelecionada = route.params?.selectedImage;
 
   const [nomePet, setNomePet] = useState("");
   const [sexo, setSexo] = useState("");
@@ -210,6 +211,12 @@ export default function PetRegistrationScreen({ navigation, route }) {
     if (!fotoPet || !token) return;
     identificarRaca(fotoPet);
   }, [fotoPet, token]);
+
+  useEffect(() => {
+    if (!imagemSelecionada) return;
+    setFotoPet(imagemSelecionada);
+    navigation.setParams({ selectedImage: undefined });
+  }, [imagemSelecionada, navigation]);
 
 
   async function identificarRaca(imagemUri) {
@@ -394,13 +401,7 @@ export default function PetRegistrationScreen({ navigation, route }) {
         <Text style={styles.label}>Foto do Pet</Text>
         <TouchableOpacity
           style={styles.photoUpload}
-          onPress={() =>
-            navigation.navigate("UploadPhoto", {
-              aoSelecionarImagem: (uri) => {
-                setFotoPet(uri);
-              },
-            })
-          }
+          onPress={() => navigation.navigate("UploadPhoto")}
           activeOpacity={0.8}
         >
           {fotoPet ? (

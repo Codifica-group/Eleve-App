@@ -7,7 +7,7 @@ export default function ServiceAgendaCard({ servico, onPress, isSelected = false
 
   const pressionar = () => {
     Animated.spring(escala, { toValue: 0.92, useNativeDriver: true, speed: 50, bounciness: 3 }).start();
-    if (onPress) onPress(servico.id || servico.key);
+    if (onPress) onPress(servico.key || servico.id);
   };
 
   const soltar = () =>

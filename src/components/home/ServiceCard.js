@@ -12,7 +12,7 @@ export default function ServiceCard({ servico, onPress }) {
       speed: 50,
       bounciness: 3,
     }).start();
-    if (onPress) onPress(servico.id || servico.key);
+    if (onPress) onPress(servico.key || servico.id);
   }
 
   const soltar = () =>

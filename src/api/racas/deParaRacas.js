@@ -19,6 +19,8 @@ const DE_PARA_RACAS = {
   "cocker spaniel ingles": "English Cocker Spaniel",
   "cocker spaniel inglês": "English Cocker Spaniel",
   "cavalier king charles spaniel": "Cavalier King Charles Spaniel",
+  havanes: "Havanese",
+  havanês: "Havanese",
   maltes: "Maltese",
   maltês: "Maltese",
   "shih tzu": "Shih Tzu",

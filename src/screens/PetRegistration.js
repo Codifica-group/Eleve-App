@@ -8,6 +8,7 @@ import {
   StyleSheet,
   ActivityIndicator,
   Alert,
+  Modal,
 } from "react-native";
 import { FontAwesome } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -112,6 +113,15 @@ function normalizarChaveTraducao(valor) {
     .replace(/[^a-z0-9]+/g, "");
 }
 
+function normalizarChaveConsultaRaca(valor) {
+  return String(valor || "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ");
+}
+
 function inferirPorte(pesoTexto) {
   if (!pesoTexto || pesoTexto === "Nao informado") return null;
   const nums = (pesoTexto.match(/\d+/g) || []).map(Number);
@@ -174,8 +184,10 @@ export default function PetRegistrationScreen({ navigation, route }) {
   const [carregandoDogApi, setCarregandoDogApi] = useState(false);
   const [salvando, setSalvando] = useState(false);
   const [token, setToken] = useState(tokenRecebido || null);
+  const [modalSucessoVisivel, setModalSucessoVisivel] = useState(false);
 
   const debounceRef = useRef(null);
+  const cacheInfoRacaRef = useRef(new Map());
 
   useEffect(() => {
     let ativo = true;
@@ -229,16 +241,30 @@ export default function PetRegistrationScreen({ navigation, route }) {
   async function buscarDadosDogApi(nome) {
     const nomeLimpo = (nome || "").trim();
     if (nomeLimpo.length < 2) return;
+
+    const chaveConsulta = normalizarChaveConsultaRaca(nomeLimpo);
+    if (cacheInfoRacaRef.current.has(chaveConsulta)) {
+      const infoEmCache = cacheInfoRacaRef.current.get(chaveConsulta);
+      setInfoDogApi(infoEmCache);
+      if (infoEmCache && !porte) {
+        const porteSugerido = inferirPorte(infoEmCache.peso);
+        if (porteSugerido) setPorte(porteSugerido);
+      }
+      return;
+    }
+
     setCarregandoDogApi(true);
     setInfoDogApi(null);
     try {
       const info = await buscarInfoRacaExterna(nomeLimpo);
+      cacheInfoRacaRef.current.set(chaveConsulta, info || null);
       setInfoDogApi(info);
       if (info && !porte) {
         const porteSugerido = inferirPorte(info.peso);
         if (porteSugerido) setPorte(porteSugerido);
       }
     } catch {
+      cacheInfoRacaRef.current.delete(chaveConsulta);
       // silencia — busca de dados externos não é obrigatória
     } finally {
       setCarregandoDogApi(false);
@@ -263,6 +289,31 @@ export default function PetRegistrationScreen({ navigation, route }) {
       const novaRaca = await criarRaca({ nome, porteId, tokenAcesso: token });
       return novaRaca.id;
     }
+  }
+
+  function continuarAposCadastro() {
+    setModalSucessoVisivel(false);
+
+    if (fromPerfil) {
+      navigation.navigate("Home", { screen: "PerfilTab" });
+      return;
+    }
+
+    navigation.reset({
+      index: 0,
+      routes: [
+        {
+          name: "Home",
+          params: {
+            nomeUsuario,
+            telefone,
+            email,
+            endereco,
+            cep,
+          },
+        },
+      ],
+    });
   }
 
   async function finalizar() {
@@ -303,32 +354,7 @@ export default function PetRegistrationScreen({ navigation, route }) {
         tokenAcesso: token,
       });
 
-      Alert.alert("Sucesso!", "Pet cadastrado com sucesso.", [
-        {
-          text: "OK",
-          onPress: () => {
-            if (fromPerfil) {
-              navigation.navigate("Home", { screen: "PerfilTab" });
-            } else {
-              navigation.reset({
-                index: 0,
-                routes: [
-                  {
-                    name: "Home",
-                    params: {
-                      nomeUsuario,
-                      telefone,
-                      email,
-                      endereco,
-                      cep,
-                    },
-                  },
-                ],
-              });
-            }
-          },
-        },
-      ]);
+      setModalSucessoVisivel(true);
     } catch (erro) {
       Alert.alert("Erro", erro?.message || "Não foi possível cadastrar o pet.");
     } finally {
@@ -493,6 +519,55 @@ export default function PetRegistrationScreen({ navigation, route }) {
           style={{ marginTop: 32 }}
         />
       </ScrollView>
+
+      <Modal
+        visible={modalSucessoVisivel}
+        transparent
+        animationType="fade"
+        onRequestClose={continuarAposCadastro}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalBadge}>
+              <FontAwesome name="check" size={24} color={COLORS.primaryDark} />
+            </View>
+
+            {fotoPet ? (
+              <Image source={{ uri: fotoPet }} style={styles.modalPetImage} />
+            ) : (
+              <View style={styles.modalPetPlaceholder}>
+                <FontAwesome name="paw" size={28} color={COLORS.primaryDark} />
+              </View>
+            )}
+
+            <Text style={styles.modalTitulo}>Pet cadastrado com sucesso</Text>
+            <Text style={styles.modalDescricao}>
+              {nomePet.trim() || "Seu pet"} já faz parte da Eleve. Agora está tudo pronto para continuar.
+            </Text>
+
+            <View style={styles.modalInfoGrid}>
+              <View style={styles.modalInfoChip}>
+                <Text style={styles.modalInfoLabel}>Raça</Text>
+                <Text style={styles.modalInfoValue}>{nomeRaca.trim() || "Não informada"}</Text>
+              </View>
+              <View style={styles.modalInfoChip}>
+                <Text style={styles.modalInfoLabel}>Porte</Text>
+                <Text style={styles.modalInfoValue}>{porte || "Não informado"}</Text>
+              </View>
+            </View>
+
+            <TouchableOpacity
+              style={styles.modalPrimaryButton}
+              onPress={continuarAposCadastro}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.modalPrimaryButtonText}>
+                {fromPerfil ? "Voltar ao perfil" : "Entrar no app"}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeScreen>
   );
 }
@@ -617,5 +692,110 @@ const styles = StyleSheet.create({
     color: COLORS.gray,
     marginBottom: 4,
     lineHeight: 19,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(12, 45, 53, 0.42)",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 24,
+  },
+  modalCard: {
+    width: "100%",
+    maxWidth: 360,
+    backgroundColor: COLORS.backgroundLight,
+    borderRadius: 28,
+    paddingHorizontal: 24,
+    paddingTop: 28,
+    paddingBottom: 24,
+    alignItems: "center",
+    shadowColor: "#0D3A45",
+    shadowOpacity: 0.2,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 10,
+  },
+  modalBadge: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: COLORS.greenLight,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 16,
+    borderWidth: 3,
+    borderColor: "rgba(85,168,145,0.22)",
+  },
+  modalPetImage: {
+    width: 92,
+    height: 92,
+    borderRadius: 24,
+    marginBottom: 18,
+  },
+  modalPetPlaceholder: {
+    width: 92,
+    height: 92,
+    borderRadius: 24,
+    marginBottom: 18,
+    backgroundColor: COLORS.blueLight,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  modalTitulo: {
+    fontSize: 24,
+    lineHeight: 30,
+    color: COLORS.primaryDark,
+    fontFamily: FONTS.extraBold,
+    textAlign: "center",
+    marginBottom: 8,
+  },
+  modalDescricao: {
+    fontSize: 15,
+    lineHeight: 22,
+    color: COLORS.gray,
+    fontFamily: FONTS.regular,
+    textAlign: "center",
+    marginBottom: 20,
+  },
+  modalInfoGrid: {
+    width: "100%",
+    flexDirection: "row",
+    gap: 10,
+    marginBottom: 22,
+  },
+  modalInfoChip: {
+    flex: 1,
+    backgroundColor: COLORS.white,
+    borderRadius: 18,
+    paddingVertical: 14,
+    paddingHorizontal: 14,
+    borderWidth: 1,
+    borderColor: "rgba(26,95,110,0.08)",
+  },
+  modalInfoLabel: {
+    fontSize: 11,
+    fontFamily: FONTS.bold,
+    color: COLORS.primaryMedium,
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
+    marginBottom: 4,
+  },
+  modalInfoValue: {
+    fontSize: 14,
+    fontFamily: FONTS.bold,
+    color: COLORS.primaryDark,
+  },
+  modalPrimaryButton: {
+    width: "100%",
+    backgroundColor: COLORS.primaryDark,
+    borderRadius: 999,
+    paddingVertical: 16,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  modalPrimaryButtonText: {
+    fontSize: 16,
+    fontFamily: FONTS.bold,
+    color: COLORS.white,
   },
 });

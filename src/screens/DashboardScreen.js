@@ -26,10 +26,16 @@ const MOCK_INFO_RACA_POR_NOME = {
   },
 };
 
+function isoDiasAtras(dias) {
+  const d = new Date();
+  d.setDate(d.getDate() - (dias || 0));
+  return d.toISOString();
+}
+
 const MOCK_INSIGHTS_RACA = [
   {
     id: "mock-raca-1",
-    createdAt: "2026-05-24T10:00:00.000Z",
+    createdAt: isoDiasAtras(1),
     petId: 1,
     nomePet: "Luna",
     nomeRaca: "Golden Retriever",
@@ -86,7 +92,7 @@ const MOCK_INSIGHTS_RACA = [
 const MOCK_INSIGHTS_AUDIO = [
   {
     id: "mock-audio-1",
-    createdAt: "2026-05-24T09:30:00.000Z",
+    createdAt: isoDiasAtras(0),
     origem: "gravacao",
     topicoKey: "banho",
     perguntaTranscrita: "Por que o pug precisa de cuidado especial nas dobrinhas depois do banho?",
@@ -102,7 +108,7 @@ const MOCK_INSIGHTS_AUDIO = [
   },
   {
     id: "mock-audio-2",
-    createdAt: "2026-05-22T11:10:00.000Z",
+    createdAt: isoDiasAtras(3),
     origem: "upload",
     topicoKey: "saude",
     perguntaTranscrita: "Meu cachorro está coçando muito depois do banho. Pode ser alergia?",
@@ -118,7 +124,7 @@ const MOCK_INSIGHTS_AUDIO = [
   },
   {
     id: "mock-audio-3",
-    createdAt: "2026-05-20T18:40:00.000Z",
+    createdAt: isoDiasAtras(5),
     origem: "gravacao",
     topicoKey: "alimentacao",
     perguntaTranscrita: "Quantas vezes por dia eu devo dar ração e como saber a porção?",
@@ -131,7 +137,7 @@ const MOCK_INSIGHTS_AUDIO = [
   },
   {
     id: "mock-audio-4",
-    createdAt: "2026-05-18T08:15:00.000Z",
+    createdAt: isoDiasAtras(10),
     origem: "gravacao",
     topicoKey: "comportamento",
     perguntaTranscrita: "Meu cachorro late quando fico fora. Isso é ansiedade?",
@@ -150,6 +156,18 @@ const TOPICOS = [
   { key: "banho", label: "Banho", icon: "tint" },
   { key: "comportamento", label: "Comport.", icon: "paw" },
   { key: "alimentacao", label: "Aliment.", icon: "cutlery" },
+];
+
+const PERIODOS = [
+  { key: "hoje", label: "Hoje" },
+  { key: "7d", label: "7 dias" },
+  { key: "30d", label: "30 dias" },
+  { key: "tudo", label: "Tudo" },
+];
+
+const ORDENACOES = [
+  { key: "relevancia", label: "Mais importantes" },
+  { key: "recentes", label: "Mais recentes" },
 ];
 
 function formatarDataCurta(iso) {
@@ -226,6 +244,51 @@ function classificarRespostaAudio(resposta) {
 
 function inferirTopicoAudio(item) {
   return item?.topicoKey || classificarRespostaAudio(item?.resposta);
+}
+
+function filtrarPorPeriodo(lista, periodoKey) {
+  if (!Array.isArray(lista)) return [];
+  if (!periodoKey || periodoKey === "tudo") return lista;
+
+  const agora = new Date();
+  let inicio = null;
+
+  if (periodoKey === "hoje") {
+    inicio = new Date(agora);
+    inicio.setHours(0, 0, 0, 0);
+  } else if (periodoKey === "7d") {
+    inicio = new Date(agora.getTime() - 7 * 24 * 60 * 60 * 1000);
+  } else if (periodoKey === "30d") {
+    inicio = new Date(agora.getTime() - 30 * 24 * 60 * 60 * 1000);
+  }
+
+  if (!inicio) return lista;
+  return lista.filter((item) => {
+    const d = new Date(item?.createdAt);
+    if (Number.isNaN(d.getTime())) return false;
+    return d.getTime() >= inicio.getTime();
+  });
+}
+
+function pesoRisco(valor) {
+  const t = normalizarTexto(valor);
+  if (t === "alto") return 3;
+  if (t === "medio") return 2;
+  if (t === "baixo") return 1;
+  return 0;
+}
+
+function prioridadeInsightRaca(insight, topicoKey) {
+  if (!insight?.insightsByTopic) return 0;
+  if (topicoKey && topicoKey !== "resumo") {
+    return pesoRisco(insight?.insightsByTopic?.[topicoKey]?.nivelRisco);
+  }
+  return Math.max(
+    pesoRisco(insight?.insightsByTopic?.saude?.nivelRisco),
+    pesoRisco(insight?.insightsByTopic?.banho?.nivelRisco),
+    pesoRisco(insight?.insightsByTopic?.comportamento?.nivelRisco),
+    pesoRisco(insight?.insightsByTopic?.alimentacao?.nivelRisco),
+  );
 }
 
 function montarTituloTopico({ topicoKey, nomePet, plural }) {
@@ -330,6 +393,8 @@ export default function DashboardScreen({ navigation }) {
   const [infoRacaCache, setInfoRacaCache] = useState({});
   const [petKey, setPetKey] = useState(null);
   const [topicoKey, setTopicoKey] = useState("resumo");
+  const [periodoKey, setPeriodoKey] = useState("30d");
+  const [ordenacaoKey, setOrdenacaoKey] = useState("relevancia");
   const [audioSelecionado, setAudioSelecionado] = useState(null);
   const carregandoInfoRef = useRef(new Set());
 
@@ -404,8 +469,18 @@ export default function DashboardScreen({ navigation }) {
     setPetKey(pets.length > 1 ? "__todos__" : pets[0].key);
   }, [petKey, pets]);
 
-  const insightsPorPet = useMemo(() => {
+  const insightsRacaPeriodo = useMemo(() => {
     const base = insightsRaca.length ? insightsRaca : MOCK_INSIGHTS_RACA;
+    return filtrarPorPeriodo(base, periodoKey);
+  }, [insightsRaca, periodoKey]);
+
+  const insightsAudioPeriodo = useMemo(() => {
+    const base = insightsAudio.length ? insightsAudio : MOCK_INSIGHTS_AUDIO;
+    return filtrarPorPeriodo(base, periodoKey);
+  }, [insightsAudio, periodoKey]);
+
+  const insightsPorPet = useMemo(() => {
+    const base = insightsRacaPeriodo;
     const mapa = new Map();
 
     for (const item of base) {
@@ -420,8 +495,21 @@ export default function DashboardScreen({ navigation }) {
       if (d2 >= d1) mapa.set(key, item);
     }
 
-    return Array.from(mapa.entries()).map(([key, item]) => ({ key, item }));
-  }, [insightsRaca]);
+    const lista = Array.from(mapa.entries()).map(([key, item]) => ({ key, item }));
+
+    lista.sort((a, b) => {
+      if (ordenacaoKey === "relevancia") {
+        const pa = prioridadeInsightRaca(a.item, topicoKey);
+        const pb = prioridadeInsightRaca(b.item, topicoKey);
+        if (pb !== pa) return pb - pa;
+      }
+      const da = new Date(a.item.createdAt);
+      const db = new Date(b.item.createdAt);
+      return db.getTime() - da.getTime();
+    });
+
+    return lista;
+  }, [insightsRacaPeriodo, ordenacaoKey, topicoKey]);
 
   const selecionado = useMemo(() => {
     if (!petKey) return null;
@@ -481,10 +569,23 @@ export default function DashboardScreen({ navigation }) {
   }, [petKey, selecionado, topicoKey]);
 
   const insightsAudioFiltrados = useMemo(() => {
-    if (topicoKey === "resumo") return insightsAudio;
-    const filtrados = insightsAudio.filter((i) => inferirTopicoAudio(i) === topicoKey);
-    return filtrados.length ? filtrados : insightsAudio;
-  }, [insightsAudio, topicoKey]);
+    const base = insightsAudioPeriodo;
+    const filtradoTopico =
+      topicoKey === "resumo" ? base : base.filter((i) => inferirTopicoAudio(i) === topicoKey);
+
+    const lista = [...(filtradoTopico.length ? filtradoTopico : base)];
+    lista.sort((a, b) => {
+      if (ordenacaoKey === "relevancia") {
+        const ra = pesoRisco(a?.nivelRisco);
+        const rb = pesoRisco(b?.nivelRisco);
+        if (rb !== ra) return rb - ra;
+      }
+      const da = new Date(a?.createdAt);
+      const db = new Date(b?.createdAt);
+      return db.getTime() - da.getTime();
+    });
+    return lista;
+  }, [insightsAudioPeriodo, ordenacaoKey, topicoKey]);
 
   return (
     <View style={[styles.tela, { paddingTop: insets.top }]}>
@@ -527,6 +628,34 @@ export default function DashboardScreen({ navigation }) {
           ))}
         </ScrollView>
 
+        <View style={styles.filtrosRow}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filtrosConteudo}>
+            {PERIODOS.map((p) => (
+              <TouchableOpacity
+                key={p.key}
+                style={[styles.filtroChip, periodoKey === p.key && styles.filtroChipAtivo]}
+                onPress={() => setPeriodoKey(p.key)}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.filtroChipText, periodoKey === p.key && styles.filtroChipTextAtivo]}>
+                  {p.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+
+          <TouchableOpacity
+            style={styles.ordenacaoChip}
+            onPress={() => setOrdenacaoKey((v) => (v === "relevancia" ? "recentes" : "relevancia"))}
+            activeOpacity={0.85}
+          >
+            <FontAwesome name="sort" size={13} color={COLORS.primaryDark} />
+            <Text style={styles.ordenacaoTexto}>
+              {ORDENACOES.find((o) => o.key === ordenacaoKey)?.label || "Ordenar"}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
         <SectionTitle label={tituloTopico} iconName="lightbulb-o" />
 
         {petsComTodos.length > 0 && (
@@ -546,7 +675,12 @@ export default function DashboardScreen({ navigation }) {
           </View>
         )}
 
-        {petKey === "__todos__" ? (
+        {insightsPorPet.length === 0 ? (
+          <EmptyState
+            title="Sem insights nesse período"
+            subtitle="Troque para “Tudo” ou gere novos insights usando o microfone."
+          />
+        ) : petKey === "__todos__" ? (
           <View style={styles.secao}>
             {insightsPorPet.map(({ key, item }) => (
               <InsightRacaCard key={key} insight={item} topicoKey={topicoKey} infoRacaCache={infoRacaCache} />
@@ -562,30 +696,37 @@ export default function DashboardScreen({ navigation }) {
 
         <SectionTitle label={montarTituloAudio({ topicoKey })} iconName="microphone" />
 
-        <View style={styles.secao}>
-          {insightsAudioFiltrados.map((item) => (
-            <TouchableOpacity
-              key={item.id}
-              style={styles.audioCard}
-              activeOpacity={0.75}
-              onPress={() => setAudioSelecionado(item)}
-            >
-              <View style={styles.audioIcon}>
-                <FontAwesome name="commenting-o" size={16} color={COLORS.primaryDark} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.audioTitulo} numberOfLines={2}>
-                  {String(item.perguntaTranscrita || "").trim() || extrairTema(item.resposta)}
-                </Text>
-                <Text style={styles.audioMeta}>
-                  {item.origem === "upload" ? "Áudio enviado" : "Áudio gravado"} ·{" "}
-                  {formatarDataCurta(item.createdAt)}
-                </Text>
-              </View>
-              <FontAwesome name="chevron-right" size={16} color={COLORS.primaryMedium} />
-            </TouchableOpacity>
-          ))}
-        </View>
+        {insightsAudioFiltrados.length === 0 ? (
+          <EmptyState
+            title="Sem perguntas nesse período"
+            subtitle="Use o microfone para perguntar e gerar conteúdo aqui."
+          />
+        ) : (
+          <View style={styles.secao}>
+            {insightsAudioFiltrados.map((item) => (
+              <TouchableOpacity
+                key={item.id}
+                style={styles.audioCard}
+                activeOpacity={0.75}
+                onPress={() => setAudioSelecionado(item)}
+              >
+                <View style={styles.audioIcon}>
+                  <FontAwesome name="commenting-o" size={16} color={COLORS.primaryDark} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.audioTitulo} numberOfLines={2}>
+                    {String(item.perguntaTranscrita || "").trim() || extrairTema(item.resposta)}
+                  </Text>
+                  <Text style={styles.audioMeta}>
+                    {item.origem === "upload" ? "Áudio enviado" : "Áudio gravado"} ·{" "}
+                    {formatarDataCurta(item.createdAt)}
+                  </Text>
+                </View>
+                <FontAwesome name="chevron-right" size={16} color={COLORS.primaryMedium} />
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
       </ScrollView>
 
       <Modal
@@ -630,6 +771,15 @@ function SectionTitle({ label, iconName }) {
       <View style={styles.secaoAccent} />
       <FontAwesome name={iconName} size={13} color={COLORS.primaryDark} style={{ marginRight: 6 }} />
       <Text style={styles.secaoTitulo}>{label}</Text>
+    </View>
+  );
+}
+
+function EmptyState({ title, subtitle }) {
+  return (
+    <View style={styles.emptyCard}>
+      <Text style={styles.emptyTitle}>{title}</Text>
+      <Text style={styles.emptySubtitle}>{subtitle}</Text>
     </View>
   );
 }
@@ -808,6 +958,53 @@ const styles = StyleSheet.create({
   menuChipTextAtivo: {
     color: COLORS.white,
   },
+  filtrosRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginBottom: 6,
+  },
+  filtrosConteudo: {
+    gap: 8,
+    paddingVertical: 4,
+    paddingRight: 6,
+  },
+  filtroChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: RADIUS.full,
+    backgroundColor: COLORS.white,
+    borderWidth: 1.5,
+    borderColor: COLORS.accent,
+  },
+  filtroChipAtivo: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
+  filtroChipText: {
+    fontSize: 12,
+    fontFamily: FONTS.bold,
+    color: COLORS.primaryMedium,
+  },
+  filtroChipTextAtivo: {
+    color: COLORS.white,
+  },
+  ordenacaoChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: RADIUS.full,
+    backgroundColor: COLORS.blueLight,
+    borderWidth: 1,
+    borderColor: COLORS.accent,
+  },
+  ordenacaoTexto: {
+    fontSize: 12,
+    fontFamily: FONTS.bold,
+    color: COLORS.primaryDark,
+  },
   petRow: {
     flexDirection: "row",
     gap: 8,
@@ -837,6 +1034,25 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.white,
     borderRadius: RADIUS.sm,
     padding: 16,
+  },
+  emptyCard: {
+    backgroundColor: COLORS.white,
+    borderRadius: RADIUS.sm,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: COLORS.accent,
+  },
+  emptyTitle: {
+    fontSize: 13,
+    fontFamily: FONTS.extraBold,
+    color: COLORS.primaryDark,
+    marginBottom: 4,
+  },
+  emptySubtitle: {
+    fontSize: 12,
+    fontFamily: FONTS.regular,
+    color: COLORS.gray,
+    lineHeight: 16,
   },
   cardHeader: {
     flexDirection: "row",

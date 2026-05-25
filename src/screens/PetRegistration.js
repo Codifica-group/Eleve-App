@@ -24,6 +24,7 @@ import { buscarRacaPorNome } from "../api/racas/buscarRaca";
 import { criarRaca } from "../api/racas/criarRaca";
 import { cadastrarPet } from "../api/pets/cadastrarPet";
 import { obterOuSincronizarClienteId } from "../api/clientes/sincronizarCliente";
+import { adicionarInsightRaca } from "../utils/insightsStorage";
 
 const PORTE_PARA_ID = { Pequeno: 1, Médio: 2, Grande: 3 };
 const GRUPOS_TRADUZIDOS = {
@@ -363,6 +364,17 @@ export default function PetRegistrationScreen({ navigation, route }) {
         foto: fotoPet,
         tokenAcesso: token,
       });
+
+      try {
+        await adicionarInsightRaca({
+          nomePet: nomePet.trim(),
+          nomeRaca: nomeRaca.trim(),
+          porte,
+          infoRacaExterna: infoDogApi,
+          sugestoesIA,
+        });
+      } catch {
+      }
 
       setModalSucessoVisivel(true);
     } catch (erro) {

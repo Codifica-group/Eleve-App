@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { 
   View, 
   StyleSheet, 
@@ -7,19 +7,18 @@ import {
   Modal, 
   TouchableOpacity, 
   ActivityIndicator, 
-  ScrollView ,
-  Platform
+  ScrollView
 } from "react-native";
 import { FontAwesome } from "@expo/vector-icons";
 import { Audio } from "expo-av";
 import * as DocumentPicker from "expo-document-picker";
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { COLORS, FONTS } from "../../constants/theme";
 import { enviarRequisicaoHttp } from "../../api/compartilhado/clienteHttp";
 import { anexarArquivoAoFormData } from "../../utils/AIUtils";
+import { adicionarInsightAudio } from "../../utils/insightsStorage";
 import Markdown from 'react-native-markdown-display';
 
-export default function AIBar() {
+export default function AIBar({ variant = "bar", promptOverride, insightExtras }) {
   const [modalVisible, setModalVisible] = useState(false);
   const [resultModalVisible, setResultModalVisible] = useState(false);
   
@@ -28,7 +27,13 @@ export default function AIBar() {
   const [isLoading, setIsLoading] = useState(false);
   const [aiResponse, setAiResponse] = useState("");
 
-  const PROMPT_VETERINARIO = "Você é um veterinário experiente e especialista em saúde, nutrição e comportamento de cachorros. Escute a dúvida do usuário e responda de forma clara, acolhedora e altamente profissional.";
+  const PROMPT_PADRAO =
+    "Você é um veterinário experiente e especialista em saúde, nutrição e comportamento de cachorros. Escute a dúvida do usuário e responda de forma clara, acolhedora e altamente profissional.";
+
+  const promptFinal = useMemo(() => {
+    const valor = String(promptOverride || "").trim();
+    return valor || PROMPT_PADRAO;
+  }, [promptOverride]);
 
   async function handleRecordPress() {
     if (isRecording) {
@@ -97,7 +102,7 @@ export default function AIBar() {
 
     try {
       const formData = new FormData();
-      formData.append('prompt', PROMPT_VETERINARIO);
+      formData.append('prompt', promptFinal);
 
       await anexarArquivoAoFormData(formData, 'audio', uri, name || 'audio.m4a', type || 'audio/mp4');
 
@@ -107,7 +112,17 @@ export default function AIBar() {
         corpoFormData: formData
       });
 
-      setAiResponse(respostaApi?.resposta || respostaApi);
+      const respostaTexto = respostaApi?.resposta || respostaApi;
+      setAiResponse(respostaTexto);
+      await adicionarInsightAudio({
+        audioUri: uri,
+        origem: name === "audio_gravado.m4a" ? "gravacao" : "upload",
+        prompt: promptFinal,
+        resposta: respostaTexto,
+        mimeType: type,
+        fileName: name,
+        ...(insightExtras || {}),
+      });
 
     } catch (error) {
       console.error('Erro na requisição da IA:', error);
@@ -124,11 +139,15 @@ export default function AIBar() {
 
   return (
     <>
-      <Pressable style={styles.container} onPress={() => setModalVisible(true)}>
-        <Text style={styles.input} style={{ fontWeight: "bold", color: COLORS.white }}>
-          Pergunte à Dra. SophIA
-        </Text>
-      </Pressable>
+      {variant === "fab" ? (
+        <TouchableOpacity style={styles.fab} onPress={() => setModalVisible(true)} activeOpacity={0.85}>
+          <FontAwesome name="microphone" size={22} color={COLORS.white} />
+        </TouchableOpacity>
+      ) : (
+        <Pressable style={styles.container} onPress={() => setModalVisible(true)}>
+          <Text style={[styles.input, { fontFamily: FONTS.bold }]}>Pergunte à Dra. SophIA</Text>
+        </Pressable>
+      )}
 
       <Modal
         animationType="fade"
@@ -206,6 +225,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     marginBottom: 18,
+  },
+  fab: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    backgroundColor: COLORS.primary,
+    alignItems: "center",
+    justifyContent: "center",
+    elevation: 5,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.22,
+    shadowRadius: 4,
   },
   input: {
     flex: 1,

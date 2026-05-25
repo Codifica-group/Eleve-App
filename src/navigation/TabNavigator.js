@@ -8,6 +8,7 @@ import HistoricoScreen from "../screens/HistoricoScreen";
 import PerfilScreen from "../screens/PerfilScreen";
 import AgendaScreen from "../screens/AgendaScreen";
 import NovoAgendamentoScreen from "../screens/NovoAgendamentoScreen";
+import DashboardScreen from "../screens/DashboardScreen";
 
 import { ABAS } from "../constants/data";
 import { COLORS } from "../constants/theme";
@@ -80,10 +81,15 @@ export default function TabNavigator({ route }) {
         component={PerfilScreen}
         initialParams={parentParams}
       />
-      <Tab.Screen 
-        name="NovoAgendamentoTab" 
-        component={NovoAgendamentoScreen} 
-        initialParams={parentParams} 
+      <Tab.Screen
+        name="NovoAgendamentoTab"
+        component={NovoAgendamentoScreen}
+        initialParams={parentParams}
+      />
+      <Tab.Screen
+        name="DashboardTab"
+        component={DashboardScreen}
+        initialParams={parentParams}
       />
     </Tab.Navigator>
   );

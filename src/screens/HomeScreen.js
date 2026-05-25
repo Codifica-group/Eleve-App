@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, ScrollView, StyleSheet } from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from "react-native";
+import { FontAwesome } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -15,7 +16,7 @@ import { montarUrlBackend } from "../api/compartilhado/proxyBackend";
 import { obterOuSincronizarClienteId } from "../api/clientes/sincronizarCliente";
 
 import { SERVICOS, MENSAGENS, PROMOS } from "../constants/data";
-import { COLORS, FONTS, SPACING } from "../constants/theme";
+import { COLORS, FONTS, SPACING, RADIUS } from "../constants/theme";
 import { resolverAcessoPosLogin } from "../api/compartilhado/posLogin";
 
 export default function HomeScreen({ route, navigation }) {
@@ -156,6 +157,21 @@ export default function HomeScreen({ route, navigation }) {
 
         <AIBar />
 
+        {/* Banner de acesso ao Painel Inteligente */}
+        <TouchableOpacity
+          style={styles.dashBanner}
+          onPress={() => navigation.navigate("DashboardTab")}
+          activeOpacity={0.85}
+        >
+          <View style={styles.dashBannerLeft}>
+            <Text style={styles.dashBannerTitulo}>Meu Painel Inteligente ✨</Text>
+            <Text style={styles.dashBannerSub}>
+              Alertas, análises e recomendações para você e seu pet
+            </Text>
+          </View>
+          <FontAwesome name="chevron-right" size={14} color={COLORS.primaryDark} />
+        </TouchableOpacity>
+
         {/* Renderização Condicional: AgendaCard se houver prioridade, senão MessageCard */}
         {proximoAgendamento ? (
           <AgendaCard 
@@ -219,5 +235,31 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     marginBottom: 20,
     marginHorizontal: -5,
+  },
+  dashBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: COLORS.blueLight,
+    borderRadius: RADIUS.sm,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: COLORS.accent,
+  },
+  dashBannerLeft: {
+    flex: 1,
+  },
+  dashBannerTitulo: {
+    fontSize: 14,
+    fontFamily: FONTS.bold,
+    color: COLORS.primaryDark,
+    marginBottom: 2,
+  },
+  dashBannerSub: {
+    fontSize: 12,
+    fontFamily: FONTS.regular,
+    color: COLORS.primaryMedium,
+    lineHeight: 16,
   },
 });

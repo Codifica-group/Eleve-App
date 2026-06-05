@@ -6,149 +6,10 @@ import { FontAwesome } from "@expo/vector-icons";
 import Markdown from "react-native-markdown-display";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { COLORS, FONTS, SPACING, RADIUS } from "../constants/theme";
-import { listarInsightsAudio, listarInsightsRaca } from "../utils/insightsStorage";
 import { obterOuSincronizarClienteId } from "../api/clientes/sincronizarCliente";
-import { listarPetsPorCliente } from "../api/pets/listarPetsPorCliente";
-import { listarPetsLocais, mesclarPetsLocaisComRemotos, salvarPetsLocais } from "../api/pets/cachePets";
 import { buscarInfoRacaExterna } from "../api/racas/buscarInfoRacaExterna";
 import AIBar from "../components/home/AIBar";
 
-const MOCK_INFO_RACA_POR_NOME = {
-  pug: {
-    peso: "6 - 8 kg",
-    expectativaVida: "12 - 15",
-    temperamento: "Afetuoso, brincalhão, sociável, adaptável",
-  },
-  "golden retriever": {
-    peso: "25 - 34 kg",
-    expectativaVida: "10 - 12",
-    temperamento: "Amigável, inteligente, confiável",
-  },
-};
-
-function isoDiasAtras(dias) {
-  const d = new Date();
-  d.setDate(d.getDate() - (dias || 0));
-  return d.toISOString();
-}
-
-const MOCK_INSIGHTS_RACA = [
-  {
-    id: "mock-raca-1",
-    createdAt: isoDiasAtras(1),
-    petId: 1,
-    nomePet: "Luna",
-    nomeRaca: "Golden Retriever",
-    porte: "Médio",
-    infoRacaExterna: {
-      peso: "25 - 34 kg",
-      expectativaVida: "10 - 12",
-      grupo: "sporting",
-      temperamento: "Amigável, inteligente, confiável",
-    },
-    sugestoesIA: [{ raca: "Golden Retriever", probabilidade: 0.78 }],
-    insightsByTopic: {
-      saude: {
-        nivelRisco: "baixo",
-        bullets: [
-          "Olhos e orelhas: observar vermelhidão e secreção após banho/passeios.",
-          "Pele: coceira persistente pode indicar alergia ou dermatite — procure vet se durar 48h+.",
-          "Vacinas e antiparasitário em dia reduzem riscos em passeios e creches.",
-        ],
-        acoesSugeridas: [
-          { tipo: "checklist", label: "Checklist de saúde", destino: "PerfilTab" },
-          { tipo: "agendar", label: "Agendar avaliação", destino: "AgendaTab" },
-        ],
-      },
-      banho: {
-        nivelRisco: "medio",
-        bullets: [
-          "Escovação pré-banho reduz nós e melhora a secagem (pelagem dupla).",
-          "Secagem completa é essencial para evitar mau cheiro e fungos na base da pelagem.",
-          "Frequência típica: a cada 15–30 dias, ajustando por rotina e sujeira.",
-        ],
-        acoesSugeridas: [{ tipo: "agendar", label: "Agendar banho", destino: "AgendaTab" }],
-      },
-      comportamento: {
-        nivelRisco: "baixo",
-        bullets: [
-          "Tende a ser sociável: reforço positivo ajuda muito no treino básico.",
-          "Rotina com passeios curtos e brincadeiras reduz ansiedade e destruição.",
-        ],
-        acoesSugeridas: [{ tipo: "conteudo", label: "Ver dicas de treino", destino: "HistoricoTab" }],
-      },
-      alimentacao: {
-        nivelRisco: "medio",
-        bullets: [
-          "Controle de porção é importante (tendência a ganhar peso).",
-          "Petiscos: limitar e priorizar os funcionais; água fresca sempre.",
-        ],
-        acoesSugeridas: [{ tipo: "conteudo", label: "Guia de porções", destino: "HistoricoTab" }],
-      },
-    },
-  },
-];
-
-const MOCK_INSIGHTS_AUDIO = [
-  {
-    id: "mock-audio-1",
-    createdAt: isoDiasAtras(0),
-    origem: "gravacao",
-    topicoKey: "banho",
-    perguntaTranscrita: "Por que o pug precisa de cuidado especial nas dobrinhas depois do banho?",
-    entidades: { raca: "Pug", tema: ["pele", "dobrinhas", "banho"] },
-    nivelRisco: "baixo",
-    confianca: 0.78,
-    resposta:
-      "O Pug tende a ter dobras na pele e olhos mais sensíveis. Limpe as dobrinhas com gaze seca após o banho e evite shampoos muito perfumados. Se houver vermelhidão, mau cheiro ou coceira, procure um veterinário.",
-    acoesSugeridas: [
-      { tipo: "checklist", label: "Checklist pós-banho", destino: "HistoricoTab" },
-      { tipo: "agendar", label: "Agendar banho", destino: "AgendaTab" },
-    ],
-  },
-  {
-    id: "mock-audio-2",
-    createdAt: isoDiasAtras(3),
-    origem: "upload",
-    topicoKey: "saude",
-    perguntaTranscrita: "Meu cachorro está coçando muito depois do banho. Pode ser alergia?",
-    entidades: { tema: ["coceira", "pele", "alergia"] },
-    nivelRisco: "medio",
-    confianca: 0.72,
-    resposta:
-      "Coceira após o banho pode acontecer por resíduo de shampoo, pele ressecada ou alergia. Garanta um enxágue bem completo, use produtos específicos para cães e observe se há vermelhidão, feridas ou mau cheiro. Se durar mais de 48h ou piorar, procure um veterinário.",
-    acoesSugeridas: [
-      { tipo: "checklist", label: "Checklist pele", destino: "HistoricoTab" },
-      { tipo: "agendar", label: "Agendar avaliação", destino: "AgendaTab" },
-    ],
-  },
-  {
-    id: "mock-audio-3",
-    createdAt: isoDiasAtras(5),
-    origem: "gravacao",
-    topicoKey: "alimentacao",
-    perguntaTranscrita: "Quantas vezes por dia eu devo dar ração e como saber a porção?",
-    entidades: { tema: ["racao", "porcao", "rotina"] },
-    nivelRisco: "baixo",
-    confianca: 0.69,
-    resposta:
-      "A maioria dos cães se adapta bem a 2 refeições por dia. A porção depende do peso, idade, nível de atividade e da ração escolhida. Use a tabela do fabricante como ponto de partida e ajuste observando a condição corporal (costelas palpáveis sem excesso de gordura).",
-    acoesSugeridas: [{ tipo: "conteudo", label: "Guia de porções", destino: "HistoricoTab" }],
-  },
-  {
-    id: "mock-audio-4",
-    createdAt: isoDiasAtras(10),
-    origem: "gravacao",
-    topicoKey: "comportamento",
-    perguntaTranscrita: "Meu cachorro late quando fico fora. Isso é ansiedade?",
-    entidades: { tema: ["ansiedade", "latido", "sozinho"] },
-    nivelRisco: "medio",
-    confianca: 0.67,
-    resposta:
-      "Pode ser ansiedade de separação. Ajuda muito criar uma rotina de saídas curtas, enriquecimento ambiental (brinquedos recheáveis) e evitar despedidas longas. Se houver destruição intensa ou automutilação, procure orientação profissional.",
-    acoesSugeridas: [{ tipo: "conteudo", label: "Plano anti-ansiedade", destino: "HistoricoTab" }],
-  },
-];
 
 const TOPICOS = [
   { key: "resumo", label: "Resumo", icon: "th-large" },
@@ -399,27 +260,31 @@ export default function DashboardScreen({ navigation }) {
   const carregandoInfoRef = useRef(new Set());
 
   async function carregar() {
-    const [racaSalvos, audioSalvos] = await Promise.all([
-      listarInsightsRaca(),
-      listarInsightsAudio(),
-    ]);
-
-    setInsightsRaca(racaSalvos.length ? racaSalvos : MOCK_INSIGHTS_RACA);
-    setInsightsAudio(audioSalvos.length ? audioSalvos : MOCK_INSIGHTS_AUDIO);
+    const clienteId = await obterOuSincronizarClienteId();
+    const tokenAcesso = await AsyncStorage.getItem("@eleve:token_acesso");
 
     try {
-      const clienteId = await obterOuSincronizarClienteId();
-      const tokenAcesso = await AsyncStorage.getItem("@eleve:token_acesso");
-      const [locais, remotos] = await Promise.all([
-        listarPetsLocais(clienteId),
-        listarPetsPorCliente({ clienteId, tokenAcesso }),
-      ]);
+      const resposta = await fetch(`${BACKEND_URL}/api/dashboard/cliente/${clienteId}`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          ...(tokenAcesso ? { Authorization: `Bearer ${tokenAcesso}` } : {}),
+        },
+      });
 
-      const mesclados = mesclarPetsLocaisComRemotos(locais, remotos);
-      await salvarPetsLocais(clienteId, mesclados);
-      setPetsLista(mesclados);
-    } catch {
-      // silencioso
+      if (!resposta.ok) {
+        throw new Error(`Erro ao carregar dashboard: ${resposta.status}`);
+      }
+
+      const dados = await resposta.json();
+      setInsightsRaca(dados.insightsRaca || []);
+      setInsightsAudio(dados.insightsAudio || []);
+      setPetsLista(dados.pets || []);
+    } catch (error) {
+      console.warn("Falha ao carregar dashboard do backend", error);
+      setInsightsRaca([]);
+      setInsightsAudio([]);
+      setPetsLista([]);
     }
   }
 
@@ -430,33 +295,17 @@ export default function DashboardScreen({ navigation }) {
   }, [navigation]);
 
   const pets = useMemo(() => {
-    if (petsLista.length) {
-      return petsLista
-        .map((pet) => ({
-          key: criarChavePet(pet),
-          nome: pet?.nome || "Pet",
-          nomeRaca: lerNomeRacaPet(pet),
-          porte: lerPortePet(pet),
-        }))
-        .filter((pet) => pet.key);
-    }
+    if (!petsLista.length) return [];
 
-    const base = insightsRaca.length ? insightsRaca : MOCK_INSIGHTS_RACA;
-    const mapa = new Map();
-
-    for (const item of base) {
-      const key = item.petId ? `id:${item.petId}` : `nome:${normalizarTexto(item.nomePet || item.nomeRaca)}`;
-      if (mapa.has(key)) continue;
-      mapa.set(key, {
-        key,
-        nome: item.nomePet || item.nomeRaca || "Pet",
-        nomeRaca: item.nomeRaca,
-        porte: item.porte,
-      });
-    }
-
-    return Array.from(mapa.values());
-  }, [insightsRaca, petsLista]);
+    return petsLista
+      .map((pet) => ({
+        key: criarChavePet(pet),
+        nome: pet?.nome || "Pet",
+        nomeRaca: lerNomeRacaPet(pet),
+        porte: lerPortePet(pet),
+      }))
+      .filter((pet) => pet.key);
+  }, [petsLista]);
 
   const petsComTodos = useMemo(() => {
     if (pets.length > 1) return [{ key: "__todos__", nome: "Todos" }, ...pets];
@@ -469,21 +318,14 @@ export default function DashboardScreen({ navigation }) {
     setPetKey(pets.length > 1 ? "__todos__" : pets[0].key);
   }, [petKey, pets]);
 
-  const insightsRacaPeriodo = useMemo(() => {
-    const base = insightsRaca.length ? insightsRaca : MOCK_INSIGHTS_RACA;
-    return filtrarPorPeriodo(base, periodoKey);
-  }, [insightsRaca, periodoKey]);
+  const insightsRacaPeriodo = useMemo(() => filtrarPorPeriodo(insightsRaca, periodoKey), [insightsRaca, periodoKey]);
 
-  const insightsAudioPeriodo = useMemo(() => {
-    const base = insightsAudio.length ? insightsAudio : MOCK_INSIGHTS_AUDIO;
-    return filtrarPorPeriodo(base, periodoKey);
-  }, [insightsAudio, periodoKey]);
+  const insightsAudioPeriodo = useMemo(() => filtrarPorPeriodo(insightsAudio, periodoKey), [insightsAudio, periodoKey]);
 
   const insightsPorPet = useMemo(() => {
-    const base = insightsRacaPeriodo;
     const mapa = new Map();
 
-    for (const item of base) {
+    for (const item of insightsRacaPeriodo) {
       const key = item.petId ? `id:${item.petId}` : `nome:${normalizarTexto(item.nomePet || item.nomeRaca)}`;
       const atual = mapa.get(key);
       if (!atual) {
@@ -511,10 +353,7 @@ export default function DashboardScreen({ navigation }) {
     return lista;
   }, [insightsRacaPeriodo, ordenacaoKey, topicoKey]);
 
-  const selecionado = useMemo(() => {
-    if (!petKey) return null;
-    return pets.find((p) => p.key === petKey) || null;
-  }, [petKey, pets]);
+  const selecionado = useMemo(() => pets.find((p) => p.key === petKey) || null, [petKey, pets]);
 
   async function garantirInfoRaca(nomeRaca) {
     const chave = normalizarTexto(nomeRaca);
@@ -524,9 +363,7 @@ export default function DashboardScreen({ navigation }) {
     carregandoInfoRef.current.add(chave);
     try {
       const info = await buscarInfoRacaExterna(nomeRaca);
-      if (info) {
-        setInfoRacaCache((prev) => ({ ...prev, [chave]: info }));
-      }
+      if (info) setInfoRacaCache((prev) => ({ ...prev, [chave]: info }));
     } catch {
       // silencioso
     } finally {
@@ -544,13 +381,15 @@ export default function DashboardScreen({ navigation }) {
     garantirInfoRaca(alvo?.nomeRaca);
   }, [petKey, pets]);
 
-  const tituloTopico = useMemo(() => {
-    return montarTituloTopico({
-      topicoKey,
-      nomePet: petKey && petKey !== "__todos__" ? selecionado?.nome : null,
-      plural: petKey === "__todos__",
-    });
-  }, [petKey, selecionado, topicoKey]);
+  const tituloTopico = useMemo(
+    () =>
+      montarTituloTopico({
+        topicoKey,
+        nomePet: petKey && petKey !== "__todos__" ? selecionado?.nome : null,
+        plural: petKey === "__todos__",
+      }),
+    [petKey, selecionado, topicoKey],
+  );
 
   const promptPainel = useMemo(() => {
     const topico = TOPICOS.find((t) => t.key === topicoKey)?.label || "Resumo";
@@ -570,8 +409,7 @@ export default function DashboardScreen({ navigation }) {
 
   const insightsAudioFiltrados = useMemo(() => {
     const base = insightsAudioPeriodo;
-    const filtradoTopico =
-      topicoKey === "resumo" ? base : base.filter((i) => inferirTopicoAudio(i) === topicoKey);
+    const filtradoTopico = topicoKey === "resumo" ? base : base.filter((i) => inferirTopicoAudio(i) === topicoKey);
 
     const lista = [...(filtradoTopico.length ? filtradoTopico : base)];
     lista.sort((a, b) => {
@@ -599,16 +437,8 @@ export default function DashboardScreen({ navigation }) {
         <View style={{ width: 20 }} />
       </View>
 
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.menuRow}
-        >
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.menuRow}>
           {TOPICOS.map((t) => (
             <TouchableOpacity
               key={t.key}
@@ -616,14 +446,8 @@ export default function DashboardScreen({ navigation }) {
               onPress={() => setTopicoKey(t.key)}
               activeOpacity={0.8}
             >
-              <FontAwesome
-                name={t.icon}
-                size={13}
-                color={topicoKey === t.key ? COLORS.white : COLORS.primaryDark}
-              />
-              <Text style={[styles.menuChipText, topicoKey === t.key && styles.menuChipTextAtivo]}>
-                {t.label}
-              </Text>
+              <FontAwesome name={t.icon} size={13} color={topicoKey === t.key ? COLORS.white : COLORS.primaryDark} />
+              <Text style={[styles.menuChipText, topicoKey === t.key && styles.menuChipTextAtivo]}>{t.label}</Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
@@ -667,19 +491,14 @@ export default function DashboardScreen({ navigation }) {
                 onPress={() => setPetKey(p.key)}
                 activeOpacity={0.75}
               >
-                <Text style={[styles.chipText, petKey === p.key && styles.chipTextAtivo]}>
-                  {p.nome}
-                </Text>
+                <Text style={[styles.chipText, petKey === p.key && styles.chipTextAtivo]}>{p.nome}</Text>
               </TouchableOpacity>
             ))}
           </View>
         )}
 
         {insightsPorPet.length === 0 ? (
-          <EmptyState
-            title="Sem insights nesse período"
-            subtitle="Troque para “Tudo” ou gere novos insights usando o microfone."
-          />
+          <EmptyState title="Sem insights nesse período" subtitle="Troque para “Tudo” ou gere novos insights usando o microfone." />
         ) : petKey === "__todos__" ? (
           <View style={styles.secao}>
             {insightsPorPet.map(({ key, item }) => (
@@ -687,29 +506,17 @@ export default function DashboardScreen({ navigation }) {
             ))}
           </View>
         ) : (
-          <InsightRacaCard
-            insight={insightsPorPet.find((p) => p.key === petKey)?.item || insightsPorPet[0]?.item}
-            topicoKey={topicoKey}
-            infoRacaCache={infoRacaCache}
-          />
+          <InsightRacaCard insight={insightsPorPet.find((p) => p.key === petKey)?.item || insightsPorPet[0]?.item} topicoKey={topicoKey} infoRacaCache={infoRacaCache} />
         )}
 
         <SectionTitle label={montarTituloAudio({ topicoKey })} iconName="microphone" />
 
         {insightsAudioFiltrados.length === 0 ? (
-          <EmptyState
-            title="Sem perguntas nesse período"
-            subtitle="Use o microfone para perguntar e gerar conteúdo aqui."
-          />
+          <EmptyState title="Sem perguntas nesse período" subtitle="Use o microfone para perguntar e gerar conteúdo aqui." />
         ) : (
           <View style={styles.secao}>
             {insightsAudioFiltrados.map((item) => (
-              <TouchableOpacity
-                key={item.id}
-                style={styles.audioCard}
-                activeOpacity={0.75}
-                onPress={() => setAudioSelecionado(item)}
-              >
+              <TouchableOpacity key={item.id} style={styles.audioCard} activeOpacity={0.75} onPress={() => setAudioSelecionado(item)}>
                 <View style={styles.audioIcon}>
                   <FontAwesome name="commenting-o" size={16} color={COLORS.primaryDark} />
                 </View>
@@ -718,8 +525,7 @@ export default function DashboardScreen({ navigation }) {
                     {String(item.perguntaTranscrita || "").trim() || extrairTema(item.resposta)}
                   </Text>
                   <Text style={styles.audioMeta}>
-                    {item.origem === "upload" ? "Áudio enviado" : "Áudio gravado"} ·{" "}
-                    {formatarDataCurta(item.createdAt)}
+                    {item.origem === "upload" ? "Áudio enviado" : "Áudio gravado"} · {formatarDataCurta(item.createdAt)}
                   </Text>
                 </View>
                 <FontAwesome name="chevron-right" size={16} color={COLORS.primaryMedium} />
@@ -729,12 +535,7 @@ export default function DashboardScreen({ navigation }) {
         )}
       </ScrollView>
 
-      <Modal
-        visible={!!audioSelecionado}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setAudioSelecionado(null)}
-      >
+      <Modal visible={!!audioSelecionado} transparent animationType="fade" onRequestClose={() => setAudioSelecionado(null)}>
         <Pressable style={styles.modalOverlay} onPress={() => setAudioSelecionado(null)}>
           <Pressable style={styles.modalCard} onPress={(e) => e.stopPropagation()}>
             <View style={styles.modalHeader}>
@@ -800,22 +601,16 @@ function InfoPill({ icon, label, value }) {
 
 function InsightRacaCard({ insight, topicoKey, infoRacaCache }) {
   if (!insight) return null;
-  const infoMock = insight?.nomeRaca ? MOCK_INFO_RACA_POR_NOME[normalizarTexto(insight.nomeRaca)] : null;
-  const infoExterna =
-    insight?.infoRacaExterna || (insight?.nomeRaca ? infoRacaCache?.[normalizarTexto(insight.nomeRaca)] : null);
-  const peso = lerCampoMulti(infoExterna, ["peso", "weight"]) || lerCampoMulti(infoMock, ["peso", "weight"]);
-  const expectativa =
-    lerCampoMulti(infoExterna, ["expectativaVida", "expectativa_vida", "life_span"]) ||
-    lerCampoMulti(infoMock, ["expectativaVida", "expectativa_vida", "life_span"]);
-  const temperamento =
-    lerCampoMulti(infoExterna, ["temperamento", "temperament"]) ||
-    lerCampoMulti(infoMock, ["temperamento", "temperament"]);
+  const infoExterna = insight?.infoRacaExterna || (insight?.nomeRaca ? infoRacaCache?.[normalizarTexto(insight.nomeRaca)] : null);
+  const peso = lerCampoMulti(infoExterna, ["peso", "weight"]);
+  const expectativa = lerCampoMulti(infoExterna, ["expectativaVida", "expectativa_vida", "life_span"]);
+  const temperamento = lerCampoMulti(infoExterna, ["temperamento", "temperament"]);
 
   const blocos =
     topicoKey === "resumo"
       ? [
           { key: "saude", titulo: "Saúde" },
-          { key: "banho", titulo: "Banho e Tosa" },
+          { key: "banho", titulo: "Banho e cuidados" },
           { key: "comportamento", titulo: "Comportamento" },
           { key: "alimentacao", titulo: "Alimentação" },
         ].map((b) => ({
@@ -846,24 +641,14 @@ function InsightRacaCard({ insight, topicoKey, infoRacaCache }) {
           <Text style={styles.cardTitulo}>
             {insight.nomePet ? `${insight.nomePet} · ${insight.nomeRaca}` : insight.nomeRaca}
           </Text>
-          <Text style={styles.cardSubtitulo}>
-            Porte: {insight.porte || "—"} · Peso: {peso || "—"}
-          </Text>
+          <Text style={styles.cardSubtitulo}>Porte: {insight.porte || "—"} · Peso: {peso || "—"}</Text>
         </View>
         <Text style={styles.dataChip}>{formatarDataCurta(insight.createdAt)}</Text>
       </View>
 
       <View style={styles.grid}>
-        <InfoPill
-          icon="heartbeat"
-          label="Expectativa"
-          value={expectativa || "—"}
-        />
-        <InfoPill
-          icon="users"
-          label="Temperamento"
-          value={temperamento || "—"}
-        />
+        <InfoPill icon="heartbeat" label="Expectativa" value={expectativa || "—"} />
+        <InfoPill icon="users" label="Temperamento" value={temperamento || "—"} />
       </View>
 
       {blocos.map((bloco) => (

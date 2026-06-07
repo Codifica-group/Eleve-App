@@ -5,6 +5,7 @@ import { StatusBar } from "expo-status-bar";
 import { FontAwesome } from "@expo/vector-icons";
 import Markdown from "react-native-markdown-display";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useTranslation } from "react-i18next";
 import { COLORS, FONTS, SPACING, RADIUS } from "../constants/theme";
 import { obterOuSincronizarClienteId } from "../api/clientes/sincronizarCliente";
 import { buscarInfoRacaExterna } from "../api/racas/buscarInfoRacaExterna";
@@ -12,23 +13,23 @@ import AIBar from "../components/home/AIBar";
 
 
 const TOPICOS = [
-  { key: "resumo", label: "Resumo", icon: "th-large" },
-  { key: "saude", label: "Saúde", icon: "heartbeat" },
-  { key: "banho", label: "Banho", icon: "tint" },
-  { key: "comportamento", label: "Comport.", icon: "paw" },
-  { key: "alimentacao", label: "Aliment.", icon: "cutlery" },
+  { key: "resumo", icon: "th-large" },
+  { key: "saude", icon: "heartbeat" },
+  { key: "banho", icon: "tint" },
+  { key: "comportamento", icon: "paw" },
+  { key: "alimentacao", icon: "cutlery" },
 ];
 
 const PERIODOS = [
-  { key: "hoje", label: "Hoje" },
-  { key: "7d", label: "7 dias" },
-  { key: "30d", label: "30 dias" },
-  { key: "tudo", label: "Tudo" },
+  { key: "hoje" },
+  { key: "7d" },
+  { key: "30d" },
+  { key: "tudo" },
 ];
 
 const ORDENACOES = [
-  { key: "relevancia", label: "Mais importantes" },
-  { key: "recentes", label: "Mais recentes" },
+  { key: "relevancia" },
+  { key: "recentes" },
 ];
 
 function formatarDataCurta(iso) {
@@ -57,9 +58,9 @@ function lerCampoMulti(info, chaves) {
   return "";
 }
 
-function extrairTema(resposta) {
+function extrairTema(resposta, t) {
   const texto = String(resposta || "").trim();
-  if (!texto) return "Pergunta por áudio";
+  if (!texto) return t("dashboard.audio.defaultTheme");
   const primeiraLinha = texto.split("\n").map((l) => l.trim()).find(Boolean) || texto;
   return primeiraLinha.length > 58 ? `${primeiraLinha.slice(0, 58)}…` : primeiraLinha;
 }
@@ -152,88 +153,74 @@ function prioridadeInsightRaca(insight, topicoKey) {
   );
 }
 
-function montarTituloTopico({ topicoKey, nomePet, plural }) {
-  const base = {
-    resumo: "Resumo",
-    saude: "Saúde",
-    banho: "Banho e Tosa",
-    comportamento: "Comportamento",
-    alimentacao: "Alimentação",
-  }[topicoKey || "resumo"];
+function montarTituloTopico({ topicoKey, nomePet, plural }, t) {
+  const base = t(`dashboard.topicsTitles.${topicoKey || "resumo"}`);
 
-  if (nomePet) return `${base} da ${nomePet}`;
-  if (plural) return `${base} dos seus pets`;
+  if (nomePet) return t("dashboard.topicsTitles.ofPet", { topic: base, name: nomePet });
+  if (plural) return t("dashboard.topicsTitles.plural", { topic: base });
   return base;
 }
 
-function montarTituloAudio({ topicoKey }) {
-  const base = {
-    resumo: "Perguntas recentes",
-    saude: "Dúvidas sobre saúde",
-    banho: "Dúvidas sobre banho",
-    comportamento: "Dúvidas de comportamento",
-    alimentacao: "Dúvidas sobre alimentação",
-  }[topicoKey || "resumo"];
-
-  return base;
+function montarTituloAudio({ topicoKey }, t) {
+  return t(`dashboard.audioTitles.${topicoKey || "resumo"}`);
 }
 
-function gerarDicas({ nomeRaca, porte, topicoKey, maxItems }) {
+function gerarDicas({ nomeRaca, porte, topicoKey, maxItems }, t) {
   const raca = String(nomeRaca || "").toLowerCase();
   const dicas = [];
   const limite = Number.isFinite(maxItems) ? Math.max(1, maxItems) : 4;
 
   if (topicoKey === "saude") {
     if (raca.includes("pug") || raca.includes("bulldog") || raca.includes("shih")) {
-      dicas.push("Dobrinha/pele: limpe e seque bem para evitar assaduras e fungos.");
+      dicas.push(t("dashboard.tips.health.folds"));
     }
-    dicas.push("Observe sinais: coceira, vermelhidão, mau cheiro e lambedura excessiva.");
-    dicas.push("Se persistir por 48h ou piorar, procure um veterinário.");
+    dicas.push(t("dashboard.tips.health.signs"));
+    dicas.push(t("dashboard.tips.health.vet"));
     return dicas.slice(0, limite);
   }
 
   if (topicoKey === "alimentacao") {
-    dicas.push("Mantenha ração de boa qualidade e água fresca sempre disponível.");
-    dicas.push("Evite petiscos em excesso e ajuste a porção conforme peso/porte.");
-    dicas.push("Mudanças na dieta devem ser graduais (3–7 dias) para evitar desconforto.");
+    dicas.push(t("dashboard.tips.feed.quality"));
+    dicas.push(t("dashboard.tips.feed.snacks"));
+    dicas.push(t("dashboard.tips.feed.changes"));
     return dicas.slice(0, limite);
   }
 
   if (topicoKey === "comportamento") {
-    dicas.push("Rotina previsível e passeios curtos ajudam a reduzir estresse.");
-    dicas.push("Reforce o bom comportamento com recompensa imediata (petisco/brinquedo).");
-    dicas.push("Se houver medo/ansiedade intensa, considere orientação de adestrador/vet.");
+    dicas.push(t("dashboard.tips.behavior.routine"));
+    dicas.push(t("dashboard.tips.behavior.reward"));
+    dicas.push(t("dashboard.tips.behavior.fear"));
     return dicas.slice(0, limite);
   }
 
   if (porte === "Pequeno") {
-    dicas.push("Use água morna e seque bem (principalmente patas e orelhas).");
-    dicas.push("Prefira banho mais frequente e rápido quando sujar, evitando excesso de produto.");
+    dicas.push(t("dashboard.tips.size.small.bath"));
+    dicas.push(t("dashboard.tips.size.small.freq"));
   }
 
   if (porte === "Médio") {
-    dicas.push("Escovação antes do banho ajuda a reduzir nós e facilita a secagem.");
-    dicas.push("Secagem completa reduz risco de mau cheiro e dermatites.");
+    dicas.push(t("dashboard.tips.size.medium.brush"));
+    dicas.push(t("dashboard.tips.size.medium.dry"));
   }
 
   if (porte === "Grande") {
-    dicas.push("Atenção à secagem da pelagem mais densa (use toalha + secador em temperatura morna).");
-    dicas.push("Divida o banho em etapas para reduzir estresse e garantir enxágue total.");
+    dicas.push(t("dashboard.tips.size.large.dry"));
+    dicas.push(t("dashboard.tips.size.large.steps"));
   }
 
   if (raca.includes("pug") || raca.includes("bulldog") || raca.includes("shih")) {
-    dicas.unshift("Cuide das dobras: limpe e seque bem para evitar assaduras e fungos.");
+    dicas.unshift(t("dashboard.tips.default.folds"));
   }
 
   if (!dicas.length) {
-    dicas.push("Observe pele e orelhas após o banho: vermelhidão e coceira são sinais de atenção.");
-    dicas.push("Prefira shampoos próprios para cães e enxágue até a água sair totalmente limpa.");
+    dicas.push(t("dashboard.tips.default.skin"));
+    dicas.push(t("dashboard.tips.default.shampoo"));
   }
 
   return dicas.slice(0, limite);
 }
 
-function obterBulletsInsight({ insight, topicoKey, maxItems }) {
+function obterBulletsInsight({ insight, topicoKey, maxItems }, t) {
   const limite = Number.isFinite(maxItems) ? Math.max(1, maxItems) : 4;
   const bullets = insight?.insightsByTopic?.[topicoKey]?.bullets;
   if (Array.isArray(bullets) && bullets.length) return bullets.slice(0, limite);
@@ -243,11 +230,12 @@ function obterBulletsInsight({ insight, topicoKey, maxItems }) {
     porte: insight?.porte,
     topicoKey,
     maxItems: limite,
-  });
+  }, t);
 }
 
 export default function DashboardScreen({ navigation }) {
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
   const [insightsRaca, setInsightsRaca] = useState([]);
   const [insightsAudio, setInsightsAudio] = useState([]);
   const [petsLista, setPetsLista] = useState([]);
@@ -308,9 +296,9 @@ export default function DashboardScreen({ navigation }) {
   }, [petsLista]);
 
   const petsComTodos = useMemo(() => {
-    if (pets.length > 1) return [{ key: "__todos__", nome: "Todos" }, ...pets];
+    if (pets.length > 1) return [{ key: "__todos__", nome: t("dashboard.allPets") }, ...pets];
     return pets;
-  }, [pets]);
+  }, [pets, t]);
 
   useEffect(() => {
     if (petKey) return;
@@ -387,25 +375,27 @@ export default function DashboardScreen({ navigation }) {
         topicoKey,
         nomePet: petKey && petKey !== "__todos__" ? selecionado?.nome : null,
         plural: petKey === "__todos__",
-      }),
-    [petKey, selecionado, topicoKey],
+      }, t),
+    [petKey, selecionado, topicoKey, t],
   );
 
   const promptPainel = useMemo(() => {
-    const topico = TOPICOS.find((t) => t.key === topicoKey)?.label || "Resumo";
-    const base =
-      "Você é um veterinário experiente e especialista em saúde, nutrição e comportamento de cachorros. Escute a dúvida do usuário e responda de forma clara, acolhedora, objetiva e altamente profissional.";
+    const topico = t(`dashboard.topics.${topicoKey || "resumo"}`);
+    const base = t("dashboard.prompt.base");
 
     if (petKey === "__todos__") {
-      return `${base}\n\nContexto: Usuária está no Painel Inteligente.\nTópico selecionado: ${topico}.\nResponda com passos práticos e sinais de alerta quando fizer sentido.`;
+      return `${base}\n\n${t("dashboard.prompt.allPets", { topic: topico })}`;
     }
 
     const nomePet = selecionado?.nome || "Pet";
     const raca = selecionado?.nomeRaca || "";
     const porte = selecionado?.porte || "";
 
-    return `${base}\n\nContexto do painel:\nPet: ${nomePet}${raca ? ` (${raca})` : ""}${porte ? ` · Porte ${porte}` : ""}\nTópico selecionado: ${topico}.\nResponda focando nesse tópico e use linguagem simples.`;
-  }, [petKey, selecionado, topicoKey]);
+    const breedInfo = raca ? ` (${raca})` : "";
+    const sizeInfo = porte ? ` · Porte ${porte}` : "";
+
+    return `${base}\n\n${t("dashboard.prompt.singlePet", { name: nomePet, breedInfo, sizeInfo, topic: topico })}`;
+  }, [petKey, selecionado, topicoKey, t]);
 
   const insightsAudioFiltrados = useMemo(() => {
     const base = insightsAudioPeriodo;
@@ -433,21 +423,21 @@ export default function DashboardScreen({ navigation }) {
         <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={14} activeOpacity={0.7}>
           <FontAwesome name="chevron-left" size={20} color={COLORS.primaryDark} />
         </TouchableOpacity>
-        <Text style={styles.titulo}>Painel Inteligente</Text>
+        <Text style={styles.titulo}>{t("dashboard.title")}</Text>
         <View style={{ width: 20 }} />
       </View>
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.menuRow}>
-          {TOPICOS.map((t) => (
+          {TOPICOS.map((tItem) => (
             <TouchableOpacity
-              key={t.key}
-              style={[styles.menuChip, topicoKey === t.key && styles.menuChipAtivo]}
-              onPress={() => setTopicoKey(t.key)}
+              key={tItem.key}
+              style={[styles.menuChip, topicoKey === tItem.key && styles.menuChipAtivo]}
+              onPress={() => setTopicoKey(tItem.key)}
               activeOpacity={0.8}
             >
-              <FontAwesome name={t.icon} size={13} color={topicoKey === t.key ? COLORS.white : COLORS.primaryDark} />
-              <Text style={[styles.menuChipText, topicoKey === t.key && styles.menuChipTextAtivo]}>{t.label}</Text>
+              <FontAwesome name={tItem.icon} size={13} color={topicoKey === tItem.key ? COLORS.white : COLORS.primaryDark} />
+              <Text style={[styles.menuChipText, topicoKey === tItem.key && styles.menuChipTextAtivo]}>{t(`dashboard.topics.${tItem.key}`)}</Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
@@ -462,7 +452,7 @@ export default function DashboardScreen({ navigation }) {
                 activeOpacity={0.8}
               >
                 <Text style={[styles.filtroChipText, periodoKey === p.key && styles.filtroChipTextAtivo]}>
-                  {p.label}
+                  {t(`dashboard.periods.${p.key}`)}
                 </Text>
               </TouchableOpacity>
             ))}
@@ -475,7 +465,7 @@ export default function DashboardScreen({ navigation }) {
           >
             <FontAwesome name="sort" size={13} color={COLORS.primaryDark} />
             <Text style={styles.ordenacaoTexto}>
-              {ORDENACOES.find((o) => o.key === ordenacaoKey)?.label || "Ordenar"}
+              {ordenacaoKey ? t(`dashboard.sort.${ordenacaoKey}`) : t("dashboard.sort.default")}
             </Text>
           </TouchableOpacity>
         </View>
@@ -498,7 +488,7 @@ export default function DashboardScreen({ navigation }) {
         )}
 
         {insightsPorPet.length === 0 ? (
-          <EmptyState title="Sem insights nesse período" subtitle="Troque para “Tudo” ou gere novos insights usando o microfone." />
+          <EmptyState title={t("dashboard.empty.insights.title")} subtitle={t("dashboard.empty.insights.subtitle")} />
         ) : petKey === "__todos__" ? (
           <View style={styles.secao}>
             {insightsPorPet.map(({ key, item }) => (
@@ -509,10 +499,10 @@ export default function DashboardScreen({ navigation }) {
           <InsightRacaCard insight={insightsPorPet.find((p) => p.key === petKey)?.item || insightsPorPet[0]?.item} topicoKey={topicoKey} infoRacaCache={infoRacaCache} />
         )}
 
-        <SectionTitle label={montarTituloAudio({ topicoKey })} iconName="microphone" />
+        <SectionTitle label={montarTituloAudio({ topicoKey }, t)} iconName="microphone" />
 
         {insightsAudioFiltrados.length === 0 ? (
-          <EmptyState title="Sem perguntas nesse período" subtitle="Use o microfone para perguntar e gerar conteúdo aqui." />
+          <EmptyState title={t("dashboard.empty.audio.title")} subtitle={t("dashboard.empty.audio.subtitle")} />
         ) : (
           <View style={styles.secao}>
             {insightsAudioFiltrados.map((item) => (
@@ -522,10 +512,10 @@ export default function DashboardScreen({ navigation }) {
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.audioTitulo} numberOfLines={2}>
-                    {String(item.perguntaTranscrita || "").trim() || extrairTema(item.resposta)}
+                    {String(item.perguntaTranscrita || "").trim() || extrairTema(item.resposta, t)}
                   </Text>
                   <Text style={styles.audioMeta}>
-                    {item.origem === "upload" ? "Áudio enviado" : "Áudio gravado"} · {formatarDataCurta(item.createdAt)}
+                    {item.origem === "upload" ? t("dashboard.audio.uploaded") : t("dashboard.audio.recorded")} · {formatarDataCurta(item.createdAt)}
                   </Text>
                 </View>
                 <FontAwesome name="chevron-right" size={16} color={COLORS.primaryMedium} />
@@ -539,7 +529,7 @@ export default function DashboardScreen({ navigation }) {
         <Pressable style={styles.modalOverlay} onPress={() => setAudioSelecionado(null)}>
           <Pressable style={styles.modalCard} onPress={(e) => e.stopPropagation()}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitulo}>Resposta da SophIA</Text>
+              <Text style={styles.modalTitulo}>{t("dashboard.audio.modalTitle")}</Text>
               <TouchableOpacity onPress={() => setAudioSelecionado(null)} hitSlop={10}>
                 <FontAwesome name="times" size={18} color={COLORS.primaryDark} />
               </TouchableOpacity>
@@ -600,6 +590,7 @@ function InfoPill({ icon, label, value }) {
 }
 
 function InsightRacaCard({ insight, topicoKey, infoRacaCache }) {
+  const { t } = useTranslation();
   if (!insight) return null;
   const infoExterna = insight?.infoRacaExterna || (insight?.nomeRaca ? infoRacaCache?.[normalizarTexto(insight.nomeRaca)] : null);
   const peso = lerCampoMulti(infoExterna, ["peso", "weight"]);
@@ -609,25 +600,25 @@ function InsightRacaCard({ insight, topicoKey, infoRacaCache }) {
   const blocos =
     topicoKey === "resumo"
       ? [
-          { key: "saude", titulo: "Saúde" },
-          { key: "banho", titulo: "Banho e cuidados" },
-          { key: "comportamento", titulo: "Comportamento" },
-          { key: "alimentacao", titulo: "Alimentação" },
+          { key: "saude", titulo: t("dashboard.blocks.health") },
+          { key: "banho", titulo: t("dashboard.blocks.bath") },
+          { key: "comportamento", titulo: t("dashboard.blocks.behavior") },
+          { key: "alimentacao", titulo: t("dashboard.blocks.feeding") },
         ].map((b) => ({
           ...b,
-          dicas: obterBulletsInsight({ insight, topicoKey: b.key, maxItems: 2 }),
+          dicas: obterBulletsInsight({ insight, topicoKey: b.key, maxItems: 2 }, t),
         }))
       : [
           {
             key: topicoKey || "resumo",
             titulo: {
-              saude: "Pontos de saúde",
-              banho: "Banho e cuidados",
-              comportamento: "Comportamento",
-              alimentacao: "Alimentação",
-              resumo: "Dicas rápidas",
+              saude: t("dashboard.blocks.health"),
+              banho: t("dashboard.blocks.bath"),
+              comportamento: t("dashboard.blocks.behavior"),
+              alimentacao: t("dashboard.blocks.feeding"),
+              resumo: t("dashboard.blocks.summary"),
             }[topicoKey || "resumo"],
-            dicas: obterBulletsInsight({ insight, topicoKey, maxItems: 4 }),
+            dicas: obterBulletsInsight({ insight, topicoKey, maxItems: 4 }, t),
           },
         ];
 
@@ -641,14 +632,14 @@ function InsightRacaCard({ insight, topicoKey, infoRacaCache }) {
           <Text style={styles.cardTitulo}>
             {insight.nomePet ? `${insight.nomePet} · ${insight.nomeRaca}` : insight.nomeRaca}
           </Text>
-          <Text style={styles.cardSubtitulo}>Porte: {insight.porte || "—"} · Peso: {peso || "—"}</Text>
+          <Text style={styles.cardSubtitulo}>{t("dashboard.card.size")}{insight.porte || t("dashboard.card.notInformed")} · {t("dashboard.card.weight")}{peso || t("dashboard.card.notInformed")}</Text>
         </View>
         <Text style={styles.dataChip}>{formatarDataCurta(insight.createdAt)}</Text>
       </View>
 
       <View style={styles.grid}>
-        <InfoPill icon="heartbeat" label="Expectativa" value={expectativa || "—"} />
-        <InfoPill icon="users" label="Temperamento" value={temperamento || "—"} />
+        <InfoPill icon="heartbeat" label={t("dashboard.card.expectancy")} value={expectativa || t("dashboard.card.notInformed")} />
+        <InfoPill icon="users" label={t("dashboard.card.temperament")} value={temperamento || t("dashboard.card.notInformed")} />
       </View>
 
       {blocos.map((bloco) => (

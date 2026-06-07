@@ -25,6 +25,7 @@ import { criarRaca } from "../api/racas/criarRaca";
 import { cadastrarPet } from "../api/pets/cadastrarPet";
 import { obterOuSincronizarClienteId } from "../api/clientes/sincronizarCliente";
 import { adicionarInsightRaca } from "../utils/insightsStorage";
+import { useTranslation } from "react-i18next";
 
 const PORTE_PARA_ID = { Pequeno: 1, Médio: 2, Grande: 3 };
 const GRUPOS_TRADUZIDOS = {
@@ -171,6 +172,7 @@ function traduzirTemperamento(valor) {
 }
 
 export default function PetRegistrationScreen({ navigation, route }) {
+  const { t } = useTranslation();
   const { nomeUsuario, telefone, email, endereco, cep, fromPerfil, token: tokenRecebido } =
     route.params || {};
 
@@ -329,23 +331,23 @@ export default function PetRegistrationScreen({ navigation, route }) {
 
   async function finalizar() {
     if (!nomePet.trim()) {
-      Alert.alert("Atenção", "Informe o nome do pet.");
+      Alert.alert(t("petRegistration.alerts.attention", "Atenção"), t("petRegistration.alerts.nameRequired", "Informe o nome do pet."));
       return;
     }
     if (!sexo) {
-      Alert.alert("Atenção", "Selecione o sexo do pet.");
+      Alert.alert(t("petRegistration.alerts.attention", "Atenção"), t("petRegistration.alerts.genderRequired", "Selecione o sexo do pet."));
       return;
     }
     if (!fotoPet) {
-      Alert.alert("Atenção", "Adicione uma foto do pet.");
+      Alert.alert(t("petRegistration.alerts.attention", "Atenção"), t("petRegistration.alerts.photoRequired", "Adicione uma foto do pet."));
       return;
     }
     if (!nomeRaca.trim()) {
-      Alert.alert("Atenção", "Informe a raça do pet.");
+      Alert.alert(t("petRegistration.alerts.attention", "Atenção"), t("petRegistration.alerts.breedRequired", "Informe a raça do pet."));
       return;
     }
     if (!porte) {
-      Alert.alert("Atenção", "Selecione o porte do pet.");
+      Alert.alert(t("petRegistration.alerts.attention", "Atenção"), t("petRegistration.alerts.sizeRequired", "Selecione o porte do pet."));
       return;
     }
 
@@ -378,7 +380,7 @@ export default function PetRegistrationScreen({ navigation, route }) {
 
       setModalSucessoVisivel(true);
     } catch (erro) {
-      Alert.alert("Erro", erro?.message || "Não foi possível cadastrar o pet.");
+      Alert.alert(t("petRegistration.alerts.error", "Erro"), erro?.message || t("petRegistration.alerts.registerError", "Não foi possível cadastrar o pet."));
     } finally {
       setSalvando(false);
     }
@@ -392,28 +394,28 @@ export default function PetRegistrationScreen({ navigation, route }) {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        <Text style={styles.titulo}>Cadastro do Pet 🐾</Text>
-        <Text style={styles.subtitulo}>Conte-nos sobre seu amigo</Text>
+        <Text style={styles.titulo}>{t("petRegistration.title", "Cadastro do Pet 🐾")}</Text>
+        <Text style={styles.subtitulo}>{t("petRegistration.subtitle", "Conte-nos sobre seu amigo")}</Text>
 
         {/* Nome */}
         <Input
-          label="Nome do Pet"
+          label={t("petRegistration.labels.name", "Nome do Pet")}
           value={nomePet}
           onChangeText={setNomePet}
-          placeholder="Ex: Caramelo"
+          placeholder={t("petRegistration.labels.namePlaceholder", "Ex: Caramelo")}
           autoCapitalize="words"
         />
 
         {/* Sexo */}
         <SelectionGroup
-          label="Sexo"
+          label={t("petRegistration.labels.gender", "Sexo")}
           opcoes={OPCOES_SEXO}
           valor={sexo}
           onChange={setSexo}
         />
 
         {/* Foto */}
-        <Text style={styles.label}>Foto do Pet</Text>
+        <Text style={styles.label}>{t("petRegistration.labels.photo", "Foto do Pet")}</Text>
         <TouchableOpacity
           style={styles.photoUpload}
           onPress={() => navigation.navigate("UploadPhoto")}
@@ -429,7 +431,7 @@ export default function PetRegistrationScreen({ navigation, route }) {
                 color="rgba(255,255,255,0.7)"
               />
               <Text style={styles.photoPlaceholderText}>
-                Toque para adicionar
+                {t("petRegistration.labels.photoTap", "Toque para adicionar")}
               </Text>
             </View>
           )}
@@ -437,10 +439,10 @@ export default function PetRegistrationScreen({ navigation, route }) {
 
         {/* Raça */}
         <Input
-          label="Raça"
+          label={t("petRegistration.labels.breed", "Raça")}
           value={nomeRaca}
           onChangeText={onRacaChange}
-          placeholder="Ex: Golden Retriever"
+          placeholder={t("petRegistration.labels.breedPlaceholder", "Ex: Golden Retriever")}
           autoCapitalize="words"
         />
 
@@ -455,7 +457,7 @@ export default function PetRegistrationScreen({ navigation, route }) {
         {/* Sugestões da IA */}
         {sugestoesIA.length > 0 && (
           <View style={styles.sugestoesBox}>
-            <Text style={styles.sugestoesLabel}>Sugestões da IA</Text>
+            <Text style={styles.sugestoesLabel}>{t("petRegistration.ia.suggestions", "Sugestões da IA")}</Text>
             <View style={styles.sugestoesRow}>
               {sugestoesIA.map((s, i) => (
                 <TouchableOpacity
@@ -489,32 +491,32 @@ export default function PetRegistrationScreen({ navigation, route }) {
         )}
         {infoDogApi && !carregandoDogApi && (
           <View style={styles.dogApiCard}>
-            <Text style={styles.dogApiTitulo}>Informações da Raça</Text>
+            <Text style={styles.dogApiTitulo}>{t("petRegistration.ia.breedInfo", "Informações da Raça")}</Text>
             {infoDogApi.grupo && infoDogApi.grupo !== "Nao informado" && (
               <Text style={styles.dogApiLinha}>
-                Grupo: {traduzirGrupoRaca(infoDogApi.grupo)}
+                {t("petRegistration.ia.group", "Grupo: ")}{traduzirGrupoRaca(infoDogApi.grupo)}
               </Text>
             )}
             {infoDogApi.peso && infoDogApi.peso !== "Nao informado" && (
               <Text style={styles.dogApiLinha}>
-                Peso (kg): {traduzirDescricaoMedida(infoDogApi.peso)}
+                {t("petRegistration.ia.weight", "Peso (kg): ")}{traduzirDescricaoMedida(infoDogApi.peso)}
               </Text>
             )}
             {infoDogApi.altura && infoDogApi.altura !== "Nao informado" && (
               <Text style={styles.dogApiLinha}>
-                Altura (cm): {traduzirDescricaoMedida(infoDogApi.altura)}
+                {t("petRegistration.ia.height", "Altura (cm): ")}{traduzirDescricaoMedida(infoDogApi.altura)}
               </Text>
             )}
             {infoDogApi.expectativaVida &&
               infoDogApi.expectativaVida !== "Nao informado" && (
                 <Text style={styles.dogApiLinha}>
-                  Expectativa de vida: {traduzirExpectativaVida(infoDogApi.expectativaVida)}
+                  {t("petRegistration.ia.lifeExpectancy", "Expectativa de vida: ")}{traduzirExpectativaVida(infoDogApi.expectativaVida)}
                 </Text>
               )}
             {infoDogApi.temperamento &&
               infoDogApi.temperamento !== "Nao informado" && (
                 <Text style={styles.dogApiLinha}>
-                  Temperamento: {traduzirTemperamento(infoDogApi.temperamento)}
+                  {t("petRegistration.ia.temperament", "Temperamento: ")}{traduzirTemperamento(infoDogApi.temperamento)}
                 </Text>
               )}
           </View>
@@ -522,14 +524,14 @@ export default function PetRegistrationScreen({ navigation, route }) {
 
         {/* Porte */}
         <SelectionGroup
-          label="Porte"
+          label={t("petRegistration.labels.size", "Porte")}
           opcoes={OPCOES_PORTE}
           valor={porte}
           onChange={setPorte}
         />
 
         <Button
-          title={salvando ? "Cadastrando..." : "Finalizar"}
+          title={salvando ? t("petRegistration.buttons.registering", "Cadastrando...") : t("petRegistration.buttons.finish", "Finalizar")}
           onPress={finalizar}
           disabled={salvando}
           style={{ marginTop: 32 }}
@@ -556,19 +558,19 @@ export default function PetRegistrationScreen({ navigation, route }) {
               </View>
             )}
 
-            <Text style={styles.modalTitulo}>Pet cadastrado com sucesso</Text>
+            <Text style={styles.modalTitulo}>{t("petRegistration.successModal.title", "Pet cadastrado com sucesso")}</Text>
             <Text style={styles.modalDescricao}>
-              {nomePet.trim() || "Seu pet"} já faz parte da Eleve. Agora está tudo pronto para continuar.
+              {t("petRegistration.successModal.description", "{{name}} já faz parte da Eleve. Agora está tudo pronto para continuar.", { name: nomePet.trim() || t("petRegistration.successModal.defaultName", "Seu pet") })}
             </Text>
 
             <View style={styles.modalInfoGrid}>
               <View style={styles.modalInfoChip}>
-                <Text style={styles.modalInfoLabel}>Raça</Text>
-                <Text style={styles.modalInfoValue}>{nomeRaca.trim() || "Não informada"}</Text>
+                <Text style={styles.modalInfoLabel}>{t("petRegistration.successModal.breedLabel", "Raça")}</Text>
+                <Text style={styles.modalInfoValue}>{nomeRaca.trim() || t("petRegistration.successModal.notInformed", "Não informada")}</Text>
               </View>
               <View style={styles.modalInfoChip}>
-                <Text style={styles.modalInfoLabel}>Porte</Text>
-                <Text style={styles.modalInfoValue}>{porte || "Não informado"}</Text>
+                <Text style={styles.modalInfoLabel}>{t("petRegistration.successModal.sizeLabel", "Porte")}</Text>
+                <Text style={styles.modalInfoValue}>{porte || t("petRegistration.successModal.sizeNotInformed", "Não informado")}</Text>
               </View>
             </View>
 
@@ -578,7 +580,7 @@ export default function PetRegistrationScreen({ navigation, route }) {
               activeOpacity={0.85}
             >
               <Text style={styles.modalPrimaryButtonText}>
-                {fromPerfil ? "Voltar ao perfil" : "Entrar no app"}
+                {fromPerfil ? t("petRegistration.successModal.btnProfile", "Voltar ao perfil") : t("petRegistration.successModal.btnApp", "Entrar no app")}
               </Text>
             </TouchableOpacity>
           </View>

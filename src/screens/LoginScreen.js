@@ -9,8 +9,10 @@ import { logarUsuario } from "../api/usuarios/logarUsuario";
 import { obterMensagemAmigavel } from "../api/compartilhado/errosApi";
 import { resolverAcessoPosLogin } from "../api/compartilhado/posLogin";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useTranslation } from "react-i18next";
 
 export default function LoginScreen({ navigation, route }) {
+  const { t } = useTranslation();
   const emailInicial = route?.params?.email || "";
 
   const [campos, setCampos] = useState({
@@ -24,9 +26,9 @@ export default function LoginScreen({ navigation, route }) {
   const camposParaValidar = useMemo(() => ["email", "senha"], []);
   const validadoresCustomizados = useMemo(
     () => ({
-      senha: { fn: (v) => String(v || "").trim().length > 0, msg: "Informe sua senha" },
+      senha: { fn: (v) => String(v || "").trim().length > 0, msg: t("login.errors.passwordRequired", "Informe sua senha") },
     }),
-    []
+    [t]
   );
   const { erros, formularioValido } = useFormValidation(
     campos,
@@ -83,7 +85,7 @@ export default function LoginScreen({ navigation, route }) {
       });
 
       if (!response.token) {
-        throw new Error("Não foi possível autenticar. Tente novamente.");
+        throw new Error(t("login.errors.authFailed", "Não foi possível autenticar. Tente novamente."));
       }
 
       const emailUsuario = response.usuario?.email || campos.email;
@@ -101,7 +103,7 @@ export default function LoginScreen({ navigation, route }) {
 
       if (!acesso.temCliente || !acesso.clienteId) {
         await limparSessaoParcial();
-        throw new Error("Seu cadastro de cliente não foi localizado. Faça o cadastro novamente.");
+        throw new Error(t("login.errors.clientNotFound", "Seu cadastro de cliente não foi localizado. Faça o cadastro novamente."));
       }
 
       await AsyncStorage.setItem("@eleve:cliente_id", String(acesso.clienteId));
@@ -158,8 +160,8 @@ export default function LoginScreen({ navigation, route }) {
             style={styles.logo}
           />
         </View>
-        <Text style={styles.titulo}>Entrar</Text>
-        <Text style={styles.subtitulo}>Use seu e-mail e senha para continuar</Text>
+        <Text style={styles.titulo}>{t("login.title", "Entrar")}</Text>
+        <Text style={styles.subtitulo}>{t("login.subtitle", "Use seu e-mail e senha para continuar")}</Text>
 
         {erroServidor ? (
           <View style={styles.erroServidorContainer}>
@@ -168,29 +170,29 @@ export default function LoginScreen({ navigation, route }) {
         ) : null}
 
         <Input
-          label="E-mail"
+          label={t("login.labels.email", "E-mail")}
           value={campos.email}
           onChangeText={(v) => atualizar("email", v)}
           onBlur={() => tocarCampo("email")}
-          placeholder="exemplo@email.com"
+          placeholder={t("login.labels.emailPlaceholder", "exemplo@email.com")}
           erro={obterErroCampo("email")}
           tocado={foiTocado("email")}
           keyboardType="email-address"
         />
 
         <Input
-          label="Senha"
+          label={t("login.labels.password", "Senha")}
           value={campos.senha}
           onChangeText={(v) => atualizar("senha", v)}
           onBlur={() => tocarCampo("senha")}
-          placeholder="Sua senha"
+          placeholder={t("login.labels.passwordPlaceholder", "Sua senha")}
           erro={obterErroCampo("senha")}
           tocado={foiTocado("senha")}
           secureTextEntry
         />
 
         <Button
-          title={carregando ? "Entrando..." : "Entrar"}
+          title={carregando ? t("login.buttons.entering", "Entrando...") : t("login.buttons.enter", "Entrar")}
           onPress={entrar}
           style={styles.botao}
           carregando={carregando}
@@ -203,7 +205,7 @@ export default function LoginScreen({ navigation, route }) {
           style={styles.linkContainer}
         >
           <Text style={styles.linkTexto}>
-            Ainda não tem conta? <Text style={styles.linkTextoDestaque}>Cadastre-se</Text>
+            {t("login.links.noAccount", "Ainda não tem conta? ")}<Text style={styles.linkTextoDestaque}>{t("login.links.register", "Cadastre-se")}</Text>
           </Text>
         </TouchableOpacity>
       </ScrollView>

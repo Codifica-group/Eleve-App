@@ -2,13 +2,15 @@ import React from "react";
 import { View, TextInput, StyleSheet } from "react-native";
 import { FontAwesome } from "@expo/vector-icons";
 import { COLORS, FONTS } from "../../constants/theme";
+import { useTranslation } from "react-i18next";
 
 export default function SearchBar({ value, onChangeText }) {
+  const { t } = useTranslation();
   return (
     <View style={styles.container}>
       <TextInput
         style={styles.input}
-        placeholder="Buscar"
+        placeholder={t("home.searchPlaceholder", "Buscar")}
         placeholderTextColor="rgba(255,255,255,0.7)"
         value={value}
         onChangeText={onChangeText}

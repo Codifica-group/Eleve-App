@@ -24,6 +24,7 @@ import { obterOuSincronizarClienteId } from "../api/clientes/sincronizarCliente"
 import { listarPetsPorClienteSimples } from "../api/pets/listarPetsPorCliente";
 import { extrairEmailDoToken } from "../utils/tokenJwt";
 import { formatarCep } from "../hooks/useFormValidation";
+import { useTranslation } from "react-i18next";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const EMAIL_KEY = "@eleve:email_usuario";
@@ -48,11 +49,12 @@ function ModalInput({ label, value, onChangeText, ...props }) {
 }
 
 export default function PerfilScreen({ navigation }) {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const ultimoCepBuscadoRef = useRef("");
 
   const [usuario, setUsuario] = useState({
-    nome: "Usuário",
+    nome: t("perfil.defaultUser", "Usuário"),
     email: "",
     telefone: "",
     endereco: "",
@@ -188,10 +190,10 @@ export default function PerfilScreen({ navigation }) {
       setClienteId(clienteIdAtual);
       setDadosEndereco(detalhesEndereco);
       setUsuario({
-        nome: dadosCliente.nome || "Usuário",
+        nome: dadosCliente.nome || t("perfil.defaultUser", "Usuário"),
         email: emailFinal,
         telefone: telefoneFinal,
-        endereco: enderecoFinal || "Endereço não informado",
+        endereco: enderecoFinal || t("perfil.addressNotInformed", "Endereço não informado"),
       });
 
       await salvarPerfilLocal({
@@ -205,10 +207,10 @@ export default function PerfilScreen({ navigation }) {
         setPets(
           petsDoCliente.map((pet) => ({
             id: pet.id,
-            nome: pet.nome || "Pet",
-            raca: pet.raca?.nome || "Não informada",
-            sexo: pet.sexo || "Não informado",
-            porte: pet.porte?.nome || "Não informado",
+            nome: pet.nome || t("perfil.defaultPet", "Pet"),
+            raca: pet.raca?.nome || t("perfil.notInformedFeminine", "Não informada"),
+            sexo: pet.sexo ? t(`data.options.${pet.sexo}`, pet.sexo) : t("perfil.notInformed", "Não informado"),
+            porte: pet.porte?.nome ? t(`data.options.${pet.porte.nome}`, pet.porte.nome) : t("perfil.notInformed", "Não informado"),
             foto: pet.foto || null,
           }))
         );
@@ -218,7 +220,7 @@ export default function PerfilScreen({ navigation }) {
     } catch (erro) {
       console.error("Erro ao carregar dados do usuário:", erro);
       setUsuario((anterior) => ({
-        nome: anterior.nome || "Usuário",
+        nome: anterior.nome || t("perfil.defaultUser", "Usuário"),
         email: perfilLocal.email || anterior.email,
         telefone: perfilLocal.telefone || anterior.telefone,
         endereco: perfilLocal.endereco || anterior.endereco,
@@ -282,7 +284,7 @@ export default function PerfilScreen({ navigation }) {
         bairro: "",
         cidade: "",
       }));
-      setErroCepEdicao("Não foi possível preencher o endereço pelo CEP. Verifique o CEP informado.");
+      setErroCepEdicao(t("perfil.editModal.cepStatus.error", "Não foi possível preencher o endereço pelo CEP. Verifique o CEP informado."));
     } finally {
       setCarregandoCepEdicao(false);
     }
@@ -323,22 +325,22 @@ export default function PerfilScreen({ navigation }) {
     const complementoAtualizado = normalizarValorSalvo(editUser.complemento);
 
     if (!nomeAtualizado) {
-      Alert.alert("Atenção", "Informe o nome do usuário.");
+      Alert.alert(t("perfil.alerts.attention", "Atenção"), t("perfil.alerts.nameRequired", "Informe o nome do usuário."));
       return;
     }
 
     if (telefoneNumeros.length < 10 || telefoneNumeros.length > 11) {
-      Alert.alert("Atenção", "Informe um telefone válido.");
+      Alert.alert(t("perfil.alerts.attention", "Atenção"), t("perfil.alerts.phoneInvalid", "Informe um telefone válido."));
       return;
     }
 
     if (!cepAtualizado || cepAtualizado.length !== 8) {
-      Alert.alert("Atenção", "Informe um CEP válido para atualizar o endereço.");
+      Alert.alert(t("perfil.alerts.attention", "Atenção"), t("perfil.alerts.cepInvalid", "Informe um CEP válido para atualizar o endereço."));
       return;
     }
 
     if (!ruaAtualizada || !bairroAtualizado || !cidadeAtualizada) {
-      Alert.alert("Atenção", "Preencha o CEP para completar rua, bairro e cidade.");
+      Alert.alert(t("perfil.alerts.attention", "Atenção"), t("perfil.alerts.cepRequired", "Preencha o CEP para completar rua, bairro e cidade."));
       return;
     }
 
@@ -376,7 +378,7 @@ export default function PerfilScreen({ navigation }) {
       nome: nomeAtualizado,
       email: emailAtualizado,
       telefone: telefoneAtualizado,
-      endereco: enderecoAtualizado || "Endereço não informado",
+      endereco: enderecoAtualizado || t("perfil.addressNotInformed", "Endereço não informado"),
     });
     setEditUserVisivel(false);
   }
@@ -392,7 +394,7 @@ export default function PerfilScreen({ navigation }) {
       navigation.reset({ index: 0, routes: [{ name: "Login" }] });
     } catch (erro) {
       console.error("Erro ao realizar logout:", erro);
-      Alert.alert("Erro", "Não foi possível realizar o logout.");
+      Alert.alert(t("perfil.alerts.error", "Erro"), t("perfil.alerts.logoutError", "Não foi possível realizar o logout."));
     }
   }
 
@@ -404,7 +406,7 @@ export default function PerfilScreen({ navigation }) {
 
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.titulo}>Seu Perfil</Text>
+        <Text style={styles.titulo}>{t("perfil.title", "Seu Perfil")}</Text>
         <View style={styles.headerIcons}>
           <TouchableOpacity activeOpacity={0.7} onPress={abrirEditarPerfil}>
             <Text style={styles.pencilEmoji}>✏️</Text>
@@ -449,7 +451,7 @@ export default function PerfilScreen({ navigation }) {
         {pets.length === 0 ? (
           <View style={styles.emptyPetCard}>
             <FontAwesome name="paw" size={36} color={COLORS.accent} />
-            <Text style={styles.emptyPetText}>Nenhum pet cadastrado ainda</Text>
+            <Text style={styles.emptyPetText}>{t("perfil.emptyPetText", "Nenhum pet cadastrado ainda")}</Text>
           </View>
         ) : (
           pets.map((pet, idx) => (
@@ -457,10 +459,10 @@ export default function PerfilScreen({ navigation }) {
               <View style={styles.petHeader}>
                 <View>
                   <Text style={styles.petCardTitle}>
-                    {pets.length > 1 ? `Pet ${idx + 1}` : "Perfil do"}
+                    {pets.length > 1 ? t("perfil.petIndex", "Pet {{index}}", { index: idx + 1 }) : t("perfil.petProfileOf", "Perfil do")}
                   </Text>
                   <Text style={styles.petCardTitle}>
-                    {pets.length > 1 ? pet.nome : "Seu Pet"}
+                    {pets.length > 1 ? pet.nome : t("perfil.yourPet", "Seu Pet")}
                   </Text>
                 </View>
                 {pet.foto ? (
@@ -474,19 +476,19 @@ export default function PerfilScreen({ navigation }) {
 
               <View style={styles.petInfoGrid}>
                 <View style={styles.petInfoItem}>
-                  <Text style={styles.petInfoLabel}>Nome</Text>
+                  <Text style={styles.petInfoLabel}>{t("perfil.labels.name", "Nome")}</Text>
                   <Text style={styles.petInfoValue}>{pet.nome}</Text>
                 </View>
                 <View style={styles.petInfoItem}>
-                  <Text style={styles.petInfoLabel}>Raça</Text>
+                  <Text style={styles.petInfoLabel}>{t("perfil.labels.breed", "Raça")}</Text>
                   <Text style={styles.petInfoValue}>{pet.raca}</Text>
                 </View>
                 <View style={styles.petInfoItem}>
-                  <Text style={styles.petInfoLabel}>Sexo</Text>
+                  <Text style={styles.petInfoLabel}>{t("perfil.labels.gender", "Sexo")}</Text>
                   <Text style={styles.petInfoValue}>{pet.sexo}</Text>
                 </View>
                 <View style={styles.petInfoItem}>
-                  <Text style={styles.petInfoLabel}>Porte</Text>
+                  <Text style={styles.petInfoLabel}>{t("perfil.labels.size", "Porte")}</Text>
                   <Text style={styles.petInfoValue}>{pet.porte}</Text>
                 </View>
               </View>
@@ -501,7 +503,7 @@ export default function PerfilScreen({ navigation }) {
           onPress={irParaCadastroPet}
         >
           <FontAwesome name="plus-circle" size={22} color={COLORS.primary} />
-          <Text style={styles.addPetButtonText}>+ Cadastrar Novo Pet</Text>
+          <Text style={styles.addPetButtonText}>{t("perfil.addPetButton", "+ Cadastrar Novo Pet")}</Text>
         </TouchableOpacity>
 
         <View style={{ height: 20 }} />
@@ -519,37 +521,37 @@ export default function PerfilScreen({ navigation }) {
           behavior={Platform.OS === "ios" ? "padding" : "height"}
         >
           <View style={styles.editContent}>
-            <Text style={styles.editTitle}>Editar Perfil</Text>
+            <Text style={styles.editTitle}>{t("perfil.editModal.title", "Editar Perfil")}</Text>
 
             <ScrollView showsVerticalScrollIndicator={false}>
               <ModalInput
-                label="Nome"
+                label={t("perfil.editModal.fields.name", "Nome")}
                 value={editUser.nome}
                 onChangeText={(v) => setEditUser((p) => ({ ...p, nome: v }))}
-                placeholder="Seu nome"
+                placeholder={t("perfil.editModal.fields.namePlaceholder", "Seu nome")}
                 autoCapitalize="words"
               />
               <ModalInput
-                label="E-mail"
+                label={t("perfil.editModal.fields.email", "E-mail")}
                 value={editUser.email}
                 onChangeText={(v) => setEditUser((p) => ({ ...p, email: v }))}
-                placeholder="email@exemplo.com"
+                placeholder={t("perfil.editModal.fields.emailPlaceholder", "email@exemplo.com")}
                 keyboardType="email-address"
               />
               <ModalInput
-                label="Telefone"
+                label={t("perfil.editModal.fields.phone", "Telefone")}
                 value={editUser.telefone}
                 onChangeText={(v) =>
                   setEditUser((p) => ({ ...p, telefone: v }))
                 }
-                placeholder="(11) 99999-9999"
+                placeholder={t("perfil.editModal.fields.phonePlaceholder", "(11) 99999-9999")}
                 keyboardType="phone-pad"
               />
               <ModalInput
-                label="CEP"
+                label={t("perfil.editModal.fields.cep", "CEP")}
                 value={editUser.cep}
                 onChangeText={onChangeCepEdicao}
-                placeholder="00000-000"
+                placeholder={t("perfil.editModal.fields.cepPlaceholder", "00000-000")}
                 keyboardType="numeric"
                 maxLength={9}
               />
@@ -561,50 +563,50 @@ export default function PerfilScreen({ navigation }) {
               >
                 {erroCepEdicao ||
                   (carregandoCepEdicao
-                    ? "Buscando endereço pelo CEP..."
-                    : "Informe o CEP para preencher rua, bairro e cidade automaticamente.")}
+                    ? t("perfil.editModal.cepStatus.searching", "Buscando endereço pelo CEP...")
+                    : t("perfil.editModal.cepStatus.hint", "Informe o CEP para preencher rua, bairro e cidade automaticamente."))}
               </Text>
               <ModalInput
-                label="Rua"
+                label={t("perfil.editModal.fields.street", "Rua")}
                 value={editUser.rua}
                 onChangeText={(v) => setEditUser((p) => ({ ...p, rua: v }))}
-                placeholder="Rua, avenida, travessa..."
+                placeholder={t("perfil.editModal.fields.streetPlaceholder", "Rua, avenida, travessa...")}
                 autoCapitalize="words"
               />
               <ModalInput
-                label="Número (opcional)"
+                label={t("perfil.editModal.fields.number", "Número (opcional)")}
                 value={editUser.numEndereco}
                 onChangeText={(v) =>
                   setEditUser((p) => ({ ...p, numEndereco: v }))
                 }
-                placeholder="Ex.: 120"
+                placeholder={t("perfil.editModal.fields.numberPlaceholder", "Ex.: 120")}
                 keyboardType="numeric"
               />
               <ModalInput
-                label="Bairro"
+                label={t("perfil.editModal.fields.neighborhood", "Bairro")}
                 value={editUser.bairro}
                 onChangeText={(v) =>
                   setEditUser((p) => ({ ...p, bairro: v }))
                 }
-                placeholder="Seu bairro"
+                placeholder={t("perfil.editModal.fields.neighborhoodPlaceholder", "Seu bairro")}
                 autoCapitalize="words"
               />
               <ModalInput
-                label="Cidade"
+                label={t("perfil.editModal.fields.city", "Cidade")}
                 value={editUser.cidade}
                 onChangeText={(v) =>
                   setEditUser((p) => ({ ...p, cidade: v }))
                 }
-                placeholder="Sua cidade"
+                placeholder={t("perfil.editModal.fields.cityPlaceholder", "Sua cidade")}
                 autoCapitalize="words"
               />
               <ModalInput
-                label="Complemento"
+                label={t("perfil.editModal.fields.complement", "Complemento")}
                 value={editUser.complemento}
                 onChangeText={(v) =>
                   setEditUser((p) => ({ ...p, complemento: v }))
                 }
-                placeholder="Apartamento, bloco, referência..."
+                placeholder={t("perfil.editModal.fields.complementPlaceholder", "Apartamento, bloco, referencia...")}
                 autoCapitalize="words"
               />
             </ScrollView>
@@ -614,13 +616,13 @@ export default function PerfilScreen({ navigation }) {
                 style={styles.editCancelBtn}
                 onPress={() => setEditUserVisivel(false)}
               >
-                <Text style={styles.editCancelText}>Cancelar</Text>
+                <Text style={styles.editCancelText}>{t("perfil.editModal.cancel", "Cancelar")}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.editSaveBtn}
                 onPress={salvarUsuario}
               >
-                <Text style={styles.editSaveText}>Salvar</Text>
+                <Text style={styles.editSaveText}>{t("perfil.editModal.save", "Salvar")}</Text>
               </TouchableOpacity>
             </View>
           </View>

@@ -1,8 +1,10 @@
 import React, { useEffect, useRef } from "react";
 import { Text, Animated, StyleSheet } from "react-native";
 import { COLORS, FONTS } from "../../constants/theme";
+import { useTranslation } from "react-i18next";
 
 export default function MessageCard({ mensagem }) {
+  const { t } = useTranslation();
   const slideAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -31,7 +33,7 @@ export default function MessageCard({ mensagem }) {
         },
       ]}
     >
-      <Text style={styles.texto}>{mensagem.texto}</Text>
+      <Text style={styles.texto}>{mensagem.tKey ? t(mensagem.tKey, mensagem.texto) : mensagem.texto}</Text>
       <Text style={styles.emoji}>{mensagem.emoji}</Text>
     </Animated.View>
   );

@@ -1,0 +1,422 @@
+{
+  "home": {
+    "greeting": "Oi, {{name}}!",
+    "question": "Do que seu pet precisa hoje?",
+    "dashboardTitle": "Meu Painel Inteligente ✨",
+    "dashboardSub": "Alertas, análises e recomendações para você e seu pet",
+    "searchPlaceholder": "Buscar",
+    "aiBar": {
+      "askSophIA": "Pergunte à Dra. SophIA",
+      "stop": "Parar",
+      "speak": "Falar",
+      "sendAudioFile": "Enviar Arquivo de Áudio",
+      "analyzing": "A Dra. SophIA está analisando sua pergunta...",
+      "micPermission": "É necessário conceder permissão de microfone para usar esta função.",
+      "errorConnecting": "Não foi possível se conectar à Inteligência Artificial. Tente novamente mais tarde.",
+      "defaultPrompt": "Você é um veterinário experiente e especialista em saúde, nutrição e comportamento de cachorros. Escute a dúvida do usuário e responda de forma clara, acolhedora e altamente profissional."
+    }
+  },
+  "data": {
+    "services": {
+      "banho": "Banho",
+      "tosa": "Tosa",
+      "hidratacao": "Hidratação"
+    },
+    "messages": {
+      "missYou": "Já faz um tempo que seu pet não vem nos visitar,\nque tal agendar um banho?",
+      "needsGrooming": "Faz tempo que seu pet não se tosa...\nQue tal tirar um tempinho para cuidarmos dele?",
+      "hygiene": "Ei, vocês sumiram! Os cuidados com a higiene do seu cão são\nprimordiais para seu bem estar, agende uma visita ao pet shop."
+    },
+    "tabs": {
+      "inicio": "Início",
+      "agenda": "Agenda",
+      "historico": "Histórico",
+      "perfil": "Perfil"
+    },
+    "labels": {
+      "Sexo": "Sexo",
+      "Porte": "Porte"
+    },
+    "options": {
+      "Macho": "Macho",
+      "Fêmea": "Fêmea",
+      "Pequeno": "Pequeno",
+      "Médio": "Médio",
+      "Grande": "Grande"
+    }
+  },
+  "agenda": {
+    "title": "Agendamento",
+    "emptyState": "Não há nenhuma solicitação de agendamento no momento.",
+    "newAppointment": "+ Novo Agendamento",
+    "feedback": {
+      "confirmed": "Agendamento confirmado com sucesso!",
+      "refused": "Agendamento recusado!",
+      "error": "Não foi possível alterar o status do agendamento."
+    },
+    "status": {
+      "refusedByPetshop": "Recusado pelo Petshop",
+      "refused": "Recusado",
+      "acceptedByPetshop": "Aceito pelo Petshop",
+      "confirmed": "Confirmado",
+      "waitingReply": "Aguardando Resposta",
+      "unknown": "Status Desconhecido"
+    },
+    "card": {
+      "noPet": "Pet não informado",
+      "service": "Serviço"
+    },
+    "modal": {
+      "title": "Detalhes do Agendamento",
+      "dateAndHour": "Data e Hora",
+      "pet": "Pet",
+      "services": "Serviços",
+      "totalValue": "Valor Total",
+      "status": "Status",
+      "refuse": "Recusar",
+      "accept": "Aceitar",
+      "close": "Fechar",
+      "notInformed": "Não informado"
+    }
+  },
+  "newAppointment": {
+    "title": "Novo Agendamento",
+    "step1": "1. Escolha o Pet",
+    "step2": "2. Selecione os Serviços",
+    "step3": "3. Escolha a Data e Horário",
+    "datePlaceholder": "DD/MM/AAAA",
+    "hints": {
+      "datePast": "Datas passadas não podem ser agendadas. Para hoje, mostramos apenas horários futuros.",
+      "chooseFuture": "Escolha hoje ou uma data futura.",
+      "invalidDate": "Digite uma data válida.",
+      "pastDatesNotAvailable": "Datas passadas não estão disponíveis para agendamento.",
+      "todayPassed": "Os horários de hoje já passaram. Escolha outro dia.",
+      "noTimes": "Nenhum horário disponível para esta data.",
+      "searchError": "Erro ao procurar horários. Tente novamente.",
+      "searching": "Buscando horários disponíveis...",
+      "selectTime": "Selecione um horário para habilitar a solicitação."
+    },
+    "button": "Solicitar Agendamento",
+    "feedback": {
+      "fillFields": "Preencha Pet e Serviço antes de solicitar o agendamento.",
+      "noAvailableTimes": "Não há horários disponíveis para a data selecionada.",
+      "selectTime": "Selecione um horário disponível para continuar.",
+      "timePassed": "Esse horário já passou. Escolha um horário futuro.",
+      "success": "Agendamento solicitado com sucesso.",
+      "serviceNotFound": "Não foi possível localizar os serviços selecionados. Atualize a tela e tente novamente.",
+      "error": "Falha ao solicitar agendamento."
+    }
+  },
+  "historico": {
+    "title": "Histórico",
+    "pagination": "Página {{current}} de {{total}}",
+    "emptyState": "Nenhum atendimento encontrado.",
+    "card": {
+      "noPet": "Pet não informado",
+      "service": "Serviço"
+    },
+    "modal": {
+      "title": "Detalhes do Atendimento",
+      "dateAndHour": "Data e Hora",
+      "pet": "Pet",
+      "services": "Serviços",
+      "notInformed": "Não informado",
+      "totalValue": "Valor Total",
+      "close": "Fechar"
+    }
+  },
+  "perfil": {
+    "title": "Seu Perfil",
+    "defaultUser": "Usuário",
+    "addressNotInformed": "Endereço não informado",
+    "defaultPet": "Pet",
+    "notInformed": "Não informado",
+    "notInformedFeminine": "Não informada",
+    "emptyPetText": "Nenhum pet cadastrado ainda",
+    "petProfileOf": "Perfil do",
+    "yourPet": "Seu Pet",
+    "petIndex": "Pet {{index}}",
+    "labels": {
+      "name": "Nome",
+      "breed": "Raça",
+      "gender": "Sexo",
+      "size": "Porte"
+    },
+    "addPetButton": "+ Cadastrar Novo Pet",
+    "editModal": {
+      "title": "Editar Perfil",
+      "cancel": "Cancelar",
+      "save": "Salvar",
+      "fields": {
+        "name": "Nome",
+        "namePlaceholder": "Seu nome",
+        "email": "E-mail",
+        "emailPlaceholder": "email@exemplo.com",
+        "phone": "Telefone",
+        "phonePlaceholder": "(11) 99999-9999",
+        "cep": "CEP",
+        "cepPlaceholder": "00000-000",
+        "street": "Rua",
+        "streetPlaceholder": "Rua, avenida, travessa...",
+        "number": "Número (opcional)",
+        "numberPlaceholder": "Ex.: 120",
+        "neighborhood": "Bairro",
+        "neighborhoodPlaceholder": "Seu bairro",
+        "city": "Cidade",
+        "cityPlaceholder": "Sua cidade",
+        "complement": "Complemento",
+        "complementPlaceholder": "Apartamento, bloco, referência..."
+      },
+      "cepStatus": {
+        "searching": "Buscando endereço pelo CEP...",
+        "hint": "Informe o CEP para preencher rua, bairro e cidade automaticamente.",
+        "error": "Não foi possível preencher o endereço pelo CEP. Verifique o CEP informado."
+      }
+    },
+    "alerts": {
+      "attention": "Atenção",
+      "nameRequired": "Informe o nome do usuário.",
+      "phoneInvalid": "Informe um telefone válido.",
+      "cepInvalid": "Informe um CEP válido para atualizar o endereço.",
+      "cepRequired": "Preencha o CEP para completar rua, bairro e cidade.",
+      "error": "Erro",
+      "logoutError": "Não foi possível realizar o logout."
+    }
+  },
+  "petRegistration": {
+    "title": "Cadastro do Pet 🐾",
+    "subtitle": "Conte-nos sobre seu amigo",
+    "labels": {
+      "name": "Nome do Pet",
+      "namePlaceholder": "Ex: Caramelo",
+      "gender": "Sexo",
+      "photo": "Foto do Pet",
+      "photoTap": "Toque para adicionar",
+      "breed": "Raça",
+      "breedPlaceholder": "Ex: Golden Retriever",
+      "size": "Porte"
+    },
+    "ia": {
+      "loading": "Identificando raça pela foto...",
+      "suggestions": "Sugestões da IA",
+      "breedInfo": "Informações da Raça",
+      "group": "Grupo: ",
+      "weight": "Peso (kg): ",
+      "height": "Altura (cm): ",
+      "lifeExpectancy": "Expectativa de vida: ",
+      "temperament": "Temperamento: "
+    },
+    "buttons": {
+      "registering": "Cadastrando...",
+      "finish": "Finalizar"
+    },
+    "alerts": {
+      "attention": "Atenção",
+      "error": "Erro",
+      "nameRequired": "Informe o nome do pet.",
+      "genderRequired": "Selecione o sexo do pet.",
+      "photoRequired": "Adicione uma foto do pet.",
+      "breedRequired": "Informe a raça do pet.",
+      "sizeRequired": "Selecione o porte do pet.",
+      "registerError": "Não foi possível cadastrar o pet."
+    },
+    "successModal": {
+      "title": "Pet cadastrado com sucesso",
+      "description": "{{name}} já faz parte da Eleve. Agora está tudo pronto para continuar.",
+      "defaultName": "Seu pet",
+      "breedLabel": "Raça",
+      "notInformed": "Não informada",
+      "sizeLabel": "Porte",
+      "sizeNotInformed": "Não informado",
+      "btnProfile": "Voltar ao perfil",
+      "btnApp": "Entrar no app"
+    }
+  },
+  "uploadPhoto": {
+    "title": "Como deseja enviar a foto?",
+    "camera": "Câmera / Webcam",
+    "gallery": "Galeria",
+    "file": "Arquivo",
+    "cancel": "Cancelar",
+    "alerts": {
+      "error": "Erro",
+      "noCameraPermission": "Sem permissão para câmera."
+    }
+  },
+  "login": {
+    "title": "Entrar",
+    "subtitle": "Use seu e-mail e senha para continuar",
+    "labels": {
+      "email": "E-mail",
+      "emailPlaceholder": "exemplo@email.com",
+      "password": "Senha",
+      "passwordPlaceholder": "Sua senha"
+    },
+    "buttons": {
+      "enter": "Entrar",
+      "entering": "Entrando..."
+    },
+    "links": {
+      "noAccount": "Ainda não tem conta? ",
+      "register": "Cadastre-se"
+    },
+    "errors": {
+      "passwordRequired": "Informe sua senha",
+      "authFailed": "Não foi possível autenticar. Tente novamente.",
+      "clientNotFound": "Seu cadastro de cliente não foi localizado. Faça o cadastro novamente."
+    }
+  },
+  "register": {
+    "title": "Crie sua conta",
+    "subtitle": "Preencha seus dados para continuar",
+    "labels": {
+      "name": "Nome Completo",
+      "namePlaceholder": "Ex: Maria Silva",
+      "phone": "Telefone",
+      "phonePlaceholder": "(11) 99876-5432",
+      "email": "E-mail",
+      "emailPlaceholder": "exemplo@email.com",
+      "password": "Senha",
+      "passwordPlaceholder": "Mínimo 8 caracteres (maiúscula, minúscula e número)",
+      "cep": "CEP",
+      "cepPlaceholder": "00000-000",
+      "street": "Rua",
+      "autoFilled": "Preenchido automaticamente",
+      "neighborhood": "Bairro",
+      "city": "Cidade",
+      "number": "Número (opcional)",
+      "numberPlaceholder": "Ex: 123",
+      "complement": "Complemento",
+      "complementPlaceholder": "Ex: Apto 12, Bloco B"
+    },
+    "cepStatus": {
+      "searching": "Buscando endereço do CEP...",
+      "fetchFailed": "Falha ao consultar CEP",
+      "notFound": "CEP não encontrado",
+      "error": "Não foi possível preencher o endereço pelo CEP. Verifique o CEP informado."
+    },
+    "buttons": {
+      "registering": "Cadastrando...",
+      "next": "Próximo"
+    },
+    "links": {
+      "hasAccount": "Já tem conta? ",
+      "enter": "Entrar"
+    },
+    "errors": {
+      "authFailed": "Não foi possível autenticar. Tente novamente."
+    }
+  },
+  "onboarding": {
+    "start": "Começar"
+  },
+  "dashboard": {
+    "title": "Painel Inteligente",
+    "allPets": "Todos",
+    "topics": {
+      "resumo": "Resumo",
+      "saude": "Saúde",
+      "banho": "Banho",
+      "comportamento": "Comport.",
+      "alimentacao": "Aliment."
+    },
+    "periods": {
+      "hoje": "Hoje",
+      "7d": "7 dias",
+      "30d": "30 dias",
+      "tudo": "Tudo"
+    },
+    "sort": {
+      "relevancia": "Mais importantes",
+      "recentes": "Mais recentes",
+      "default": "Ordenar"
+    },
+    "empty": {
+      "insights": {
+        "title": "Sem insights nesse período",
+        "subtitle": "Troque para “Tudo” ou gere novos insights usando o microfone."
+      },
+      "audio": {
+        "title": "Sem perguntas nesse período",
+        "subtitle": "Use o microfone para perguntar e gerar conteúdo aqui."
+      }
+    },
+    "audio": {
+      "uploaded": "Áudio enviado",
+      "recorded": "Áudio gravado",
+      "modalTitle": "Resposta da SophIA",
+      "defaultTheme": "Pergunta por áudio"
+    },
+    "card": {
+      "size": "Porte: ",
+      "weight": "Peso: ",
+      "notInformed": "—",
+      "expectancy": "Expectativa",
+      "temperament": "Temperamento"
+    },
+    "topicsTitles": {
+      "resumo": "Resumo",
+      "saude": "Saúde",
+      "banho": "Banho e Tosa",
+      "comportamento": "Comportamento",
+      "alimentacao": "Alimentação",
+      "ofPet": "{{topic}} da {{name}}",
+      "plural": "{{topic}} dos seus pets"
+    },
+    "audioTitles": {
+      "resumo": "Perguntas recentes",
+      "saude": "Dúvidas sobre saúde",
+      "banho": "Dúvidas sobre banho",
+      "comportamento": "Dúvidas de comportamento",
+      "alimentacao": "Dúvidas sobre alimentação"
+    },
+    "blocks": {
+      "health": "Pontos de saúde",
+      "bath": "Banho e cuidados",
+      "behavior": "Comportamento",
+      "feeding": "Alimentação",
+      "summary": "Dicas rápidas"
+    },
+    "tips": {
+      "health": {
+        "folds": "Dobrinha/pele: limpe e seque bem para evitar assaduras e fungos.",
+        "signs": "Observe sinais: coceira, vermelhidão, mau cheiro e lambedura excessiva.",
+        "vet": "Se persistir por 48h ou piorar, procure um veterinário."
+      },
+      "feed": {
+        "quality": "Mantenha ração de boa qualidade e água fresca sempre disponível.",
+        "snacks": "Evite petiscos em excesso e ajuste a porção conforme peso/porte.",
+        "changes": "Mudanças na dieta devem ser graduais (3–7 dias) para evitar desconforto."
+      },
+      "behavior": {
+        "routine": "Rotina previsível e passeios curtos ajudam a reduzir estresse.",
+        "reward": "Reforce o bom comportamento com recompensa imediata (petisco/brinquedo).",
+        "fear": "Se houver medo/ansiedade intensa, considere orientação de adestrador/vet."
+      },
+      "size": {
+        "small": {
+          "bath": "Use água morna e seque bem (principalmente patas e orelhas).",
+          "freq": "Prefira banho mais frequente e rápido quando sujar, evitando excesso de produto."
+        },
+        "medium": {
+          "brush": "Escovação antes do banho ajuda a reduzir nós e facilita a secagem.",
+          "dry": "Secagem completa reduz risco de mau cheiro e dermatites."
+        },
+        "large": {
+          "dry": "Atenção à secagem da pelagem mais densa (use toalha + secador em temperatura morna).",
+          "steps": "Divida o banho em etapas para reduzir estresse e garantir enxágue total."
+        }
+      },
+      "default": {
+        "folds": "Cuide das dobras: limpe e seque bem para evitar assaduras e fungos.",
+        "skin": "Observe pele e orelhas após o banho: vermelhidão e coceira são sinais de atenção.",
+        "shampoo": "Prefira shampoos próprios para cães e enxágue até a água sair totalmente limpa."
+      }
+    },
+    "prompt": {
+      "base": "Você é um veterinário experiente e especialista em saúde, nutrição e comportamento de cachorros. Escute a dúvida do usuário e responda de forma clara, acolhedora, objetiva e altamente profissional.",
+      "allPets": "Contexto: Usuária está no Painel Inteligente.\nTópico selecionado: {{topic}}.\nResponda com passos práticos e sinais de alerta quando fizer sentido.",
+      "singlePet": "Contexto do painel:\nPet: {{name}}{{breedInfo}}{{sizeInfo}}\nTópico selecionado: {{topic}}.\nResponda focando nesse tópico e use linguagem simples."
+    }
+  }
+}

@@ -1,18 +1,33 @@
 import React from "react";
 import { View, Text, Image, TouchableOpacity, StyleSheet } from "react-native";
+import { useTranslation } from "react-i18next";
+import AsyncStorage from "@react-native-async-storage/async-storage"; // Importação do AsyncStorage
 import { COLORS, FONTS } from "../../constants/theme";
 
-export default function Header({ nomeUsuario, onSettingsPress }) {
+export default function Header({ nomeUsuario }) {
+  const { t, i18n } = useTranslation();
   const primeiroNome = nomeUsuario.trim().split(" ")[0];
+
+  const alternarIdioma = async () => {
+    try {
+      const proximoIdioma = i18n.language === "pt" ? "es" : "pt";
+      
+      await i18n.changeLanguage(proximoIdioma);
+      
+      await AsyncStorage.setItem("@eleve:idioma", proximoIdioma);
+    } catch (error) {
+      console.error("Erro ao salvar o idioma no AsyncStorage:", error);
+    }
+  };
 
   return (
     <View style={styles.header}>
       <Text style={styles.saudacao}>
-        Oi, {primeiroNome}! <Text style={styles.emoji}>😊</Text>
+        {t("home.greeting", { name: primeiroNome })} <Text style={styles.emoji}>😊</Text>
       </Text>
-      <TouchableOpacity activeOpacity={0.7} onPress={onSettingsPress}>
+      <TouchableOpacity activeOpacity={0.7} onPress={alternarIdioma}>
         <Image
-          source={require("../../../assets/logo_configuracao.png")}
+          source={require("../../../assets/traducao.png")}
           style={styles.iconConfig}
         />
       </TouchableOpacity>

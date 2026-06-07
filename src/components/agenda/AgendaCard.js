@@ -1,16 +1,19 @@
 import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { COLORS, FONTS } from "../../constants/theme";
+import { useTranslation } from "react-i18next";
 
-function getDiaSemana(ano, mes, dia) {
+function getDiaSemana(ano, mes, dia, locale) {
   const date = new Date(ano, mes, dia);
   return date
-    .toLocaleDateString("pt-BR", { weekday: "short" })
+    .toLocaleDateString(locale, { weekday: "short" })
     .replace(".", "")
     .toUpperCase();
 }
 
 export default function AgendaCard({ item, onPress }) {
+  const { t, i18n } = useTranslation();
+  const locale = i18n.language === 'es' ? 'es-ES' : 'pt-BR';
   const dataAtendimento = new Date(item.dataHoraInicio);
   const anoAtendimento = dataAtendimento.getFullYear();
   const mesAtendimento = dataAtendimento.getMonth();
@@ -18,7 +21,7 @@ export default function AgendaCard({ item, onPress }) {
   const horaAtendimento = dataAtendimento.getHours();
   const minutoAtendimento = dataAtendimento.getMinutes();
 
-  const diaSemana = getDiaSemana(anoAtendimento, mesAtendimento, diaAtendimento);
+  const diaSemana = getDiaSemana(anoAtendimento, mesAtendimento, diaAtendimento, locale);
 
   let stringHorario = `${String(horaAtendimento).padStart(2, "0")}:${String(minutoAtendimento).padStart(2, "0")}`;
   if (item.dataHoraFim) {
@@ -28,38 +31,41 @@ export default function AgendaCard({ item, onPress }) {
 
   let corCard = COLORS.accent;
   let corDia = COLORS.primary;
-  let statusTexto = "Aguardando";
+  let statusTexto = t("agenda.status.waitingReply", "Aguardando");
 
   switch (item.status) {
     case "RECUSADO_PELO_PETSHOP":
       corCard = "#E57373";
       corDia = "#C62828";
-      statusTexto = "Recusado pelo Petshop";
+      statusTexto = t("agenda.status.refusedByPetshop", "Recusado pelo Petshop");
       break;
     case "RECUSADO_PELO_CLIENTE":
       corCard = "#E57373";
       corDia = "#C62828";
-      statusTexto = "Recusado";
+      statusTexto = t("agenda.status.refused", "Recusado");
       break;
     case "ACEITO_PELO_PETSHOP":
       corCard = "#FFE082";
       corDia = "#FFB300";
-      statusTexto = "Aceito pelo Petshop";
+      statusTexto = t("agenda.status.acceptedByPetshop", "Aceito pelo Petshop");
       break;
     case "CONFIRMADO":
       corCard = "#81C784";
       corDia = "#388E3C";
-      statusTexto = "Confirmado";
+      statusTexto = t("agenda.status.confirmed", "Confirmado");
       break;
     case "AGUARDANDO_RESPOSTA_PETSHOP":
-      statusTexto = "Aguardando Resposta";
+      statusTexto = t("agenda.status.waitingReply", "Aguardando Resposta");
       break;
     default:
-      statusTexto = item.status || "Status Desconhecido";
+      statusTexto = item.status || t("agenda.status.unknown", "Status Desconhecido");
       break;
   }
 
-  const nomesServicos = item.servicos ? item.servicos.map((s) => s.nome).join(" e ") : "Serviço";
+  const nomesServicos = item.servicos ? item.servicos.map((s) => {
+    const chave = s.nome.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    return t(`data.services.${chave}`, s.nome);
+  }).join(i18n.language === 'es' ? " y " : " e ") : t("agenda.card.service", "Serviço");
 
   const exibirValor = item.valorTotal && item.valorTotal > 0.00 ? true : false;
 
@@ -80,7 +86,7 @@ export default function AgendaCard({ item, onPress }) {
       
       <View style={styles.cardInfo}>
         <Text style={styles.cardServico} numberOfLines={1}>
-          {item.pet?.nome || "Pet não informado"} - {nomesServicos}
+          {item.pet?.nome || t("agenda.card.noPet", "Pet não informado")} - {nomesServicos}
         </Text>
         
         {exibirValor && (

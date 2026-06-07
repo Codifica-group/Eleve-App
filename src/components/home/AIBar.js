@@ -17,8 +17,10 @@ import { enviarRequisicaoHttp } from "../../api/compartilhado/clienteHttp";
 import { anexarArquivoAoFormData } from "../../utils/AIUtils";
 import { adicionarInsightAudio } from "../../utils/insightsStorage";
 import Markdown from 'react-native-markdown-display';
+import { useTranslation } from "react-i18next";
 
 export default function AIBar({ variant = "bar", promptOverride, insightExtras }) {
+  const { t } = useTranslation();
   const [modalVisible, setModalVisible] = useState(false);
   const [resultModalVisible, setResultModalVisible] = useState(false);
   
@@ -28,7 +30,7 @@ export default function AIBar({ variant = "bar", promptOverride, insightExtras }
   const [aiResponse, setAiResponse] = useState("");
 
   const PROMPT_PADRAO =
-    "Você é um veterinário experiente e especialista em saúde, nutrição e comportamento de cachorros. Escute a dúvida do usuário e responda de forma clara, acolhedora e altamente profissional.";
+    t("home.aiBar.defaultPrompt", "Você é um veterinário experiente e especialista em saúde, nutrição e comportamento de cachorros. Escute a dúvida do usuário e responda de forma clara, acolhedora e altamente profissional.");
 
   const promptFinal = useMemo(() => {
     const valor = String(promptOverride || "").trim();
@@ -58,7 +60,7 @@ export default function AIBar({ variant = "bar", promptOverride, insightExtras }
         setRecording(recording);
         setIsRecording(true);
       } else {
-        alert('É necessário conceder permissão de microfone para usar esta função.');
+        alert(t("home.aiBar.micPermission", 'É necessário conceder permissão de microfone para usar esta função.'));
       }
     } catch (err) {
       console.error('Falha ao iniciar a gravação:', err);
@@ -130,7 +132,7 @@ export default function AIBar({ variant = "bar", promptOverride, insightExtras }
       setAiResponse(
         error?.mensagem || 
         error?.message || 
-        "Não foi possível se conectar à Inteligência Artificial. Tente novamente mais tarde."
+        t("home.aiBar.errorConnecting", "Não foi possível se conectar à Inteligência Artificial. Tente novamente mais tarde.")
       );
     } finally {
       setIsLoading(false);
@@ -145,7 +147,7 @@ export default function AIBar({ variant = "bar", promptOverride, insightExtras }
         </TouchableOpacity>
       ) : (
         <Pressable style={styles.container} onPress={() => setModalVisible(true)}>
-          <Text style={[styles.input, { fontFamily: FONTS.bold }]}>Pergunte à Dra. SophIA</Text>
+          <Text style={[styles.input, { fontFamily: FONTS.bold }]}>{t("home.aiBar.askSophIA", "Pergunte à Dra. SophIA")}</Text>
         </Pressable>
       )}
 
@@ -164,7 +166,7 @@ export default function AIBar({ variant = "bar", promptOverride, insightExtras }
             >
               <FontAwesome name={isRecording ? "stop" : "microphone"} size={32} color={COLORS.white} />
               <Text style={styles.roundButtonText}>
-                {isRecording ? "Parar" : "Falar"}
+                {isRecording ? t("home.aiBar.stop", "Parar") : t("home.aiBar.speak", "Falar")}
               </Text>
             </TouchableOpacity>
 
@@ -172,7 +174,7 @@ export default function AIBar({ variant = "bar", promptOverride, insightExtras }
 
             <TouchableOpacity style={styles.fileButton} onPress={pickAudioFile}>
               <FontAwesome name="file-audio-o" size={18} color={COLORS.dark} style={{ marginRight: 8 }} />
-              <Text style={styles.fileButtonText}>Enviar Arquivo de Áudio</Text>
+              <Text style={styles.fileButtonText}>{t("home.aiBar.sendAudioFile", "Enviar Arquivo de Áudio")}</Text>
             </TouchableOpacity>
 
           </Pressable>
@@ -198,7 +200,7 @@ export default function AIBar({ variant = "bar", promptOverride, insightExtras }
             {isLoading ? (
               <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color={COLORS.primary} />
-                <Text style={styles.loadingText}>A Dra. SophIA está analisando sua pergunta...</Text>
+                <Text style={styles.loadingText}>{t("home.aiBar.analyzing", "A Dra. SophIA está analisando sua pergunta...")}</Text>
               </View>
             ) : (
               <ScrollView style={styles.responseScroll} showsVerticalScrollIndicator={false}>

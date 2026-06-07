@@ -1,8 +1,10 @@
 import React, { useRef } from "react";
 import { Text, Image, View, Pressable, Animated, StyleSheet } from "react-native";
 import { COLORS, FONTS } from "../../constants/theme";
+import { useTranslation } from "react-i18next";
 
 export default function ServiceCard({ servico, onPress }) {
+  const { t } = useTranslation();
   const escala = useRef(new Animated.Value(1)).current;
 
   const pressionar = () => {
@@ -38,7 +40,7 @@ export default function ServiceCard({ servico, onPress }) {
         <View style={[styles.iconCircle, { backgroundColor: servico.cor }]}>
           <Image source={servico.icon} style={styles.icon} />
         </View>
-        <Text style={styles.label}>{servico.label}</Text>
+        <Text style={styles.label}>{servico.tKey ? t(servico.tKey, servico.label) : servico.label}</Text>
       </Animated.View>
     </Pressable>
   );

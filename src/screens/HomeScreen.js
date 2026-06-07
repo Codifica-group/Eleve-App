@@ -4,6 +4,7 @@ import { FontAwesome } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useTranslation } from 'react-i18next'  
 
 import Header from "../components/home/Header";
 import ServiceCard from "../components/home/ServiceCard";
@@ -20,6 +21,7 @@ import { COLORS, FONTS, SPACING, RADIUS } from "../constants/theme";
 import { resolverAcessoPosLogin } from "../api/compartilhado/posLogin";
 
 export default function HomeScreen({ route, navigation }) {
+  const { t } = useTranslation();
   const params = route?.params || {};
   const insets = useSafeAreaInsets();
   const [verificandoAcesso, setVerificandoAcesso] = useState(true);
@@ -141,7 +143,7 @@ export default function HomeScreen({ route, navigation }) {
         ) : null}
 
         <Text style={styles.pergunta}>
-          Do que seu pet precisa hoje?
+          {t('home.question')}
         </Text>
 
         {/* Serviços */}
@@ -164,9 +166,9 @@ export default function HomeScreen({ route, navigation }) {
           activeOpacity={0.85}
         >
           <View style={styles.dashBannerLeft}>
-            <Text style={styles.dashBannerTitulo}>Meu Painel Inteligente ✨</Text>
+            <Text style={styles.dashBannerTitulo}>{t('home.dashboardTitle')}</Text>
             <Text style={styles.dashBannerSub}>
-              Alertas, análises e recomendações para você e seu pet
+              {t('home.dashboardSub')}
             </Text>
           </View>
           <FontAwesome name="chevron-right" size={14} color={COLORS.primaryDark} />

@@ -17,8 +17,10 @@ import { obterOuSincronizarClienteId } from "../api/clientes/sincronizarCliente"
 import AgendaCard from "../components/agenda/AgendaCard";
 import ModalDetalhesAtendimento from "../components/agenda/ModalDetalhesAtendimento";
 import FeedbackManager from "../utils/FeedbackManager";
+import { useTranslation } from "react-i18next";
 
 export default function AgendaScreen({ navigation }) {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const [agendamentos, setAgendamentos] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -119,13 +121,13 @@ export default function AgendaScreen({ navigation }) {
 
       setModalVisivel(false);
       const feedbackMessage = novoStatus === "CONFIRMADO" 
-        ? "Agendamento confirmado com sucesso!" 
-        : "Agendamento recusado!";
+        ? t("agenda.feedback.confirmed", "Agendamento confirmado com sucesso!") 
+        : t("agenda.feedback.refused", "Agendamento recusado!");
       FeedbackManager.success(feedbackMessage);
       carregarAgenda();
     } catch (error) {
       console.error("Falha ao atualizar status da agenda:", error);
-      FeedbackManager.error("Não foi possível alterar o status do agendamento.");
+      FeedbackManager.error(t("agenda.feedback.error", "Não foi possível alterar o status do agendamento."));
     } finally {
       setProcessandoAcao(false);
     }
@@ -137,7 +139,7 @@ export default function AgendaScreen({ navigation }) {
 
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.titulo}>Agendamento</Text>
+        <Text style={styles.titulo}>{t("agenda.title", "Agendamento")}</Text>
       </View>
 
       <ScrollView
@@ -150,7 +152,7 @@ export default function AgendaScreen({ navigation }) {
         ) : agendamentos.length === 0 ? (
           <View style={styles.vazioContainer}>
             <Text style={styles.vazioTexto}>
-              Não há nenhuma solicitação de agendamento no momento.
+              {t("agenda.emptyState", "Não há nenhuma solicitação de agendamento no momento.")}
             </Text>
           </View>
         ) : (
@@ -182,7 +184,7 @@ export default function AgendaScreen({ navigation }) {
           activeOpacity={0.8}
           onPress={() => navigation.navigate("NovoAgendamentoTab")}
         >
-          <Text style={styles.botaoNovoTexto}>+ Novo Agendamento</Text>
+          <Text style={styles.botaoNovoTexto}>{t("agenda.newAppointment", "+ Novo Agendamento")}</Text>
         </TouchableOpacity>
       </View>
     </View>

@@ -12,8 +12,11 @@ import { obterOuSincronizarClienteId } from "../api/clientes/sincronizarCliente"
 import { enviarRequisicaoHttp } from "../api/compartilhado/clienteHttp";
 import { resolverServicosAgendamento } from "../api/servicos/listarServicos";
 import FeedbackManager from "../utils/FeedbackManager";
+import { useTranslation } from "react-i18next";
 
 export default function NovoAgendamentoScreen({ route, navigation }) {
+  const { t, i18n } = useTranslation();
+  const locale = i18n.language === 'es' ? 'es-ES' : 'pt-BR';
   const insets = useSafeAreaInsets();
   const servicoInicial = route?.params?.servicoInicial || null;
 
@@ -93,7 +96,7 @@ export default function NovoAgendamentoScreen({ route, navigation }) {
 
   const formatDate = (d) => {
     if (!d) return "";
-    return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    return d.toLocaleDateString(locale, { day: '2-digit', month: '2-digit', year: 'numeric' });
   };
 
   const parseDate = (text) => {
@@ -168,7 +171,7 @@ export default function NovoAgendamentoScreen({ route, navigation }) {
 
     const hoje = criarHoje();
     if (dataSelecionada < hoje) {
-      setMensagemErroHorario("Datas passadas não estão disponíveis para agendamento.");
+      setMensagemErroHorario(t("newAppointment.hints.pastDatesNotAvailable", "Datas passadas não estão disponíveis para agendamento."));
       setCarregandoHorarios(false);
       return;
     }
@@ -188,13 +191,13 @@ export default function NovoAgendamentoScreen({ route, navigation }) {
         setIsAtStart(true);
         setIsAtEnd(horariosFuturos.length <= 4);
       } else if (horariosRecebidos.length > 0 && ehMesmoDia(dataSelecionada, new Date())) {
-        setMensagemErroHorario("Os horários de hoje já passaram. Escolha outro dia.");
+        setMensagemErroHorario(t("newAppointment.hints.todayPassed", "Os horários de hoje já passaram. Escolha outro dia."));
       } else {
-        setMensagemErroHorario("Nenhum horário disponível para esta data.");
+        setMensagemErroHorario(t("newAppointment.hints.noTimes", "Nenhum horário disponível para esta data."));
       }
     } catch (error) {
       console.log("Erro ao buscar disponibilidades:", error);
-      setMensagemErroHorario("Erro ao procurar horários. Tente novamente.");
+      setMensagemErroHorario(t("newAppointment.hints.searchError", "Erro ao procurar horários. Tente novamente."));
     } finally {
       setCarregandoHorarios(false);
     }
@@ -209,7 +212,7 @@ export default function NovoAgendamentoScreen({ route, navigation }) {
         setHorarios([]);
         setSelectedTime("");
         setMensagemErroHorario("");
-        setMensagemErroData("Escolha hoje ou uma data futura.");
+        setMensagemErroData(t("newAppointment.hints.chooseFuture", "Escolha hoje ou uma data futura."));
         return;
       }
 
@@ -232,7 +235,7 @@ export default function NovoAgendamentoScreen({ route, navigation }) {
         setHorarios([]);
         setSelectedTime("");
         setMensagemErroHorario("");
-        setMensagemErroData("Digite uma data válida.");
+        setMensagemErroData(t("newAppointment.hints.invalidDate", "Digite uma data válida."));
         return;
       }
 
@@ -240,7 +243,7 @@ export default function NovoAgendamentoScreen({ route, navigation }) {
         setHorarios([]);
         setSelectedTime("");
         setMensagemErroHorario("");
-        setMensagemErroData("Escolha hoje ou uma data futura.");
+        setMensagemErroData(t("newAppointment.hints.chooseFuture", "Escolha hoje ou uma data futura."));
         return;
       }
 
@@ -274,7 +277,7 @@ export default function NovoAgendamentoScreen({ route, navigation }) {
 
   const agendar = async () => {
     if (!selectedPet || selectedServices.length === 0) {
-      FeedbackManager.error("Preencha Pet e Serviço antes de solicitar o agendamento.");
+      FeedbackManager.error(t("newAppointment.feedback.fillFields", "Preencha Pet e Serviço antes de solicitar o agendamento."));
       return;
     }
 
@@ -284,12 +287,12 @@ export default function NovoAgendamentoScreen({ route, navigation }) {
     }
 
     if (!temHorariosDisponiveis) {
-      FeedbackManager.error("Não há horários disponíveis para a data selecionada.");
+      FeedbackManager.error(t("newAppointment.feedback.noAvailableTimes", "Não há horários disponíveis para a data selecionada."));
       return;
     }
 
     if (!horarioSelecionadoValido) {
-      FeedbackManager.error("Selecione um horário disponível para continuar.");
+      FeedbackManager.error(t("newAppointment.feedback.selectTime", "Selecione um horário disponível para continuar."));
       return;
     }
 
@@ -297,9 +300,9 @@ export default function NovoAgendamentoScreen({ route, navigation }) {
       const dataHoraSelecionada = criarDataHoraLocal(date, selectedTime);
       if (!dataHoraSelecionada || dataHoraSelecionada.getTime() <= Date.now()) {
         setSelectedTime("");
-        setMensagemErroHorario("Escolha um horário futuro para continuar.");
+        setMensagemErroHorario(t("newAppointment.feedback.timePassed", "Esse horário já passou. Escolha um horário futuro."));
         await carregarDisponibilidade(date);
-        FeedbackManager.error("Esse horário já passou. Escolha um horário futuro.");
+        FeedbackManager.error(t("newAppointment.feedback.timePassed", "Esse horário já passou. Escolha um horário futuro."));
         return;
       }
 
@@ -326,7 +329,7 @@ export default function NovoAgendamentoScreen({ route, navigation }) {
         corpoJson: payload
       });
 
-      FeedbackManager.success("Agendamento solicitado com sucesso.");
+      FeedbackManager.success(t("newAppointment.feedback.success", "Agendamento solicitado com sucesso."));
       
       // Limpa os campos logo após o sucesso
       const resetDate = criarHoje();
@@ -343,16 +346,16 @@ export default function NovoAgendamentoScreen({ route, navigation }) {
       const mensagemBackend = String(error?.message || "").toLowerCase();
       if (mensagemBackend.includes("data no passado")) {
         setSelectedTime("");
-        setMensagemErroHorario("Esse horário já passou. Escolha um horário futuro.");
+        setMensagemErroHorario(t("newAppointment.feedback.timePassed", "Esse horário já passou. Escolha um horário futuro."));
         await carregarDisponibilidade(date);
-        FeedbackManager.error("Esse horário já passou. Escolha um horário futuro.");
+        FeedbackManager.error(t("newAppointment.feedback.timePassed", "Esse horário já passou. Escolha um horário futuro."));
         return;
       }
 
       const mensagem =
         error?.message?.includes("Serviço não encontrado")
-          ? "Não foi possível localizar os serviços selecionados. Atualize a tela e tente novamente."
-          : "Falha ao solicitar agendamento.";
+          ? t("newAppointment.feedback.serviceNotFound", "Não foi possível localizar os serviços selecionados. Atualize a tela e tente novamente.")
+          : t("newAppointment.feedback.error", "Falha ao solicitar agendamento.");
       FeedbackManager.error(mensagem);
     }
   };
@@ -361,12 +364,12 @@ export default function NovoAgendamentoScreen({ route, navigation }) {
     <View style={[styles.tela, { paddingTop: insets.top }]}>
       <StatusBar style="dark" />
       <ScrollView showsVerticalScrollIndicator={false}>
-        <Text style={styles.titulo}>Novo Agendamento</Text>
+        <Text style={styles.titulo}>{t("newAppointment.title", "Novo Agendamento")}</Text>
 
-        <Text style={styles.sectionTitle}>1. Escolha o Pet</Text>
+        <Text style={styles.sectionTitle}>{t("newAppointment.step1", "1. Escolha o Pet")}</Text>
         <PetCarousel pets={pets} selectedPetId={selectedPet} onSelectPet={setSelectedPet} />
 
-        <Text style={styles.sectionTitle}>2. Selecione os Serviços</Text>
+        <Text style={styles.sectionTitle}>{t("newAppointment.step2", "2. Selecione os Serviços")}</Text>
         <View style={styles.servicosRow}>
           {SERVICOS.slice(0, 3).map((s) => (
             <ServiceAgendaCard
@@ -378,7 +381,7 @@ export default function NovoAgendamentoScreen({ route, navigation }) {
           ))}
         </View>
 
-        <Text style={styles.sectionTitle}>3. Escolha a Data e Horário</Text>
+        <Text style={styles.sectionTitle}>{t("newAppointment.step3", "3. Escolha a Data e Horário")}</Text>
         <View style={styles.pickerContainer}>
           
           <View style={styles.dateInputContainer}>
@@ -386,7 +389,7 @@ export default function NovoAgendamentoScreen({ route, navigation }) {
               style={styles.dateInput}
               value={dateText}
               onChangeText={handleDateTextChange}
-              placeholder="DD/MM/AAAA"
+              placeholder={t("newAppointment.datePlaceholder", "DD/MM/AAAA")}
               keyboardType="numeric"
               maxLength={10}
             />
@@ -396,7 +399,7 @@ export default function NovoAgendamentoScreen({ route, navigation }) {
           </View>
 
           <Text style={mensagemErroData ? styles.erroDataTexto : styles.dateHintText}>
-            {mensagemErroData || "Datas passadas não podem ser agendadas. Para hoje, mostramos apenas horários futuros."}
+            {mensagemErroData || t("newAppointment.hints.datePast", "Datas passadas não podem ser agendadas. Para hoje, mostramos apenas horários futuros.")}
           </Text>
 
           {showDatePicker && (
@@ -412,7 +415,7 @@ export default function NovoAgendamentoScreen({ route, navigation }) {
           {/* Área dos Horários e Tratamento de Erros */}
           <View style={styles.horariosContainer}>
             {carregandoHorarios ? (
-              <Text style={styles.horarioAjudaTexto}>Buscando horários disponíveis...</Text>
+              <Text style={styles.horarioAjudaTexto}>{t("newAppointment.hints.searching", "Buscando horários disponíveis...")}</Text>
             ) : mensagemErroHorario ? (
               <Text style={styles.erroTexto}>{mensagemErroHorario}</Text>
             ) : (
@@ -454,7 +457,7 @@ export default function NovoAgendamentoScreen({ route, navigation }) {
         </View>
 
         {!carregandoHorarios && temHorariosDisponiveis && !horarioSelecionadoValido ? (
-          <Text style={styles.horarioAjudaTexto}>Selecione um horário para habilitar a solicitação.</Text>
+          <Text style={styles.horarioAjudaTexto}>{t("newAppointment.hints.selectTime", "Selecione um horário para habilitar a solicitação.")}</Text>
         ) : null}
 
         <TouchableOpacity
@@ -462,7 +465,7 @@ export default function NovoAgendamentoScreen({ route, navigation }) {
           onPress={podeSolicitarAgendamento ? agendar : undefined}
           activeOpacity={podeSolicitarAgendamento ? 0.8 : 1}
         >
-          <Text style={styles.btnAgendarText}>Solicitar Agendamento</Text>
+          <Text style={styles.btnAgendarText}>{t("newAppointment.button", "Solicitar Agendamento")}</Text>
         </TouchableOpacity>
       </ScrollView>
     </View>

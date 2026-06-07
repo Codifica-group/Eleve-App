@@ -11,11 +11,13 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import SafeScreen from "../components/common/SafeScreen";
 import { ONBOARDING_IMAGES } from "../constants/data";
 import { COLORS, FONTS } from "../constants/theme";
+import { useTranslation } from "react-i18next";
 
 const TOTAL = ONBOARDING_IMAGES.length;
 const ONBOARDING_SEEN_KEY = "@eleve:onboarding_seen";
 
 export default function OnboardingScreen({ navigation }) {
+  const { t } = useTranslation();
   const [index, setIndex] = useState(0);
   const progressAnim = useRef(new Animated.Value(0)).current;
   const hasNavigatedRef = useRef(false);
@@ -125,7 +127,7 @@ export default function OnboardingScreen({ navigation }) {
       {/* ÁREA INFERIOR */}
       <View style={styles.bottomArea}>
         <TouchableOpacity style={styles.startButton} onPress={goToLogin}>
-          <Text style={styles.startText}>Começar</Text>
+          <Text style={styles.startText}>{t("onboarding.start", "Começar")}</Text>
         </TouchableOpacity>
       </View>
     </SafeScreen>

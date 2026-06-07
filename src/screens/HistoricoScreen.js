@@ -16,17 +16,18 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { COLORS, FONTS, SPACING } from "../constants/theme";
 import { montarUrlBackend } from "../api/compartilhado/proxyBackend";
 import { obterOuSincronizarClienteId } from "../api/clientes/sincronizarCliente";
+import { useTranslation } from "react-i18next";
 
-function getNomeMes(mes) {
+function getNomeMes(mes, locale) {
   const date = new Date(2026, mes, 1);
-  const nome = date.toLocaleDateString("pt-BR", { month: "long" });
+  const nome = date.toLocaleDateString(locale, { month: "long" });
   return nome.charAt(0).toUpperCase() + nome.slice(1);
 }
 
-function getDiaSemana(ano, mes, dia) {
+function getDiaSemana(ano, mes, dia, locale) {
   const date = new Date(ano, mes, dia);
   return date
-    .toLocaleDateString("pt-BR", { weekday: "short" })
+    .toLocaleDateString(locale, { weekday: "short" })
     .replace(".", "")
     .toUpperCase();
 }
@@ -36,6 +37,8 @@ function formatarDataIsoString(data) {
 }
 
 export default function HistoricoScreen({ navigation, route }) {
+  const { t, i18n } = useTranslation();
+  const locale = i18n.language === 'es' ? 'es-ES' : 'pt-BR';
   const insets = useSafeAreaInsets();
   const hoje = new Date();
 
@@ -143,8 +146,8 @@ export default function HistoricoScreen({ navigation, route }) {
 
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.titulo}>Histórico</Text>
-        <FontAwesome name="gear" size={26} color={COLORS.primaryMedium} />
+        <Text style={styles.titulo}>{t("historico.title", "Histórico")}</Text>
+        {/* <FontAwesome name="gear" size={26} color={COLORS.primaryMedium} /> */}
       </View>
 
       <View style={styles.paginacaoContainer}>
@@ -154,7 +157,7 @@ export default function HistoricoScreen({ navigation, route }) {
           </Text>
         </TouchableOpacity>
         <Text style={styles.paginacaoTexto}>
-          Página {paginaAtual + 1} de {totalPaginas}
+          {t("historico.pagination", "Página {{current}} de {{total}}", { current: paginaAtual + 1, total: totalPaginas })}
         </Text>
         <TouchableOpacity onPress={paginaSeguinte} hitSlop={12} disabled={paginaAtual >= totalPaginas - 1 || loading}>
           <Text style={[styles.seta, (paginaAtual >= totalPaginas - 1 || loading) && styles.setaDesabilitada]}>
@@ -173,7 +176,7 @@ export default function HistoricoScreen({ navigation, route }) {
         ) : atendimentos.length === 0 ? (
           <View style={styles.vazioContainer}>
             <Text style={styles.vazioTexto}>
-              Nenhum atendimento encontrado.
+              {t("historico.emptyState", "Nenhum atendimento encontrado.")}
             </Text>
           </View>
         ) : (
@@ -189,7 +192,7 @@ export default function HistoricoScreen({ navigation, route }) {
             const horaFimAtendimento = dataFimAtendimento.getHours();
             const minutoFimAtendimento = dataFimAtendimento.getMinutes();
             
-            const diaSemana = getDiaSemana(anoAtendimento, mesAtendimento, diaAtendimento);
+            const diaSemana = getDiaSemana(anoAtendimento, mesAtendimento, diaAtendimento, locale);
             
             const diffMeses =
               (hoje.getFullYear() - anoAtendimento) * 12 +
@@ -206,7 +209,10 @@ export default function HistoricoScreen({ navigation, route }) {
               corDia = "#C62828";
             }
 
-            const nomesServicos = item.servicos ? item.servicos.map(s => s.nome).join(" e ") : "Serviço";
+            const nomesServicos = item.servicos ? item.servicos.map(s => {
+              const chave = s.nome.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+              return t(`data.services.${chave}`, s.nome);
+            }).join(i18n.language === 'es' ? " y " : " e ") : t("historico.card.service", "Serviço");
 
             return (
               <TouchableOpacity
@@ -224,7 +230,7 @@ export default function HistoricoScreen({ navigation, route }) {
                 </View>
                 <View style={styles.cardInfo}>
                   <Text style={styles.cardServico} numberOfLines={1}>
-                    {item.pet?.nome || "Pet não informado"} - {nomesServicos}
+                    {item.pet?.nome || t("historico.card.noPet", "Pet não informado")} - {nomesServicos}
                   </Text>
                   <Text style={styles.cardValor}>
                     R$ {item.valorTotal.toFixed(2).replace('.', ',')}
@@ -252,31 +258,34 @@ export default function HistoricoScreen({ navigation, route }) {
               const dataModal = new Date(atendimentoSelecionado.dataHoraInicio);
               const dataFimModal = new Date(atendimentoSelecionado.dataHoraFim);
               const nomesServicosModal = atendimentoSelecionado.servicos 
-                ? atendimentoSelecionado.servicos.map(s => s.nome).join(", ") 
-                : "Não informado";
+                ? atendimentoSelecionado.servicos.map(s => {
+                    const chave = s.nome.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                    return t(`data.services.${chave}`, s.nome);
+                  }).join(", ") 
+                : t("historico.modal.notInformed", "Não informado");
                 
               return (
                 <>
-                  <Text style={styles.modalTitulo}>Detalhes do Atendimento</Text>
+                  <Text style={styles.modalTitulo}>{t("historico.modal.title", "Detalhes do Atendimento")}</Text>
                   <View style={styles.modalDivisor} />
                   
-                  <Text style={styles.modalLabel}>Data e Hora</Text>
+                  <Text style={styles.modalLabel}>{t("historico.modal.dateAndHour", "Data e Hora")}</Text>
                   <Text style={styles.modalValor}>
                     {String(dataModal.getDate()).padStart(2, "0")} de{" "}
-                    {getNomeMes(dataModal.getMonth())} de {dataModal.getFullYear()} às {String(dataModal.getHours()).padStart(2, "0")}:{String(dataModal.getMinutes()).padStart(2, "0")} - {String(dataFimModal.getHours()).padStart(2, "0")}:{String(dataFimModal.getMinutes()).padStart(2, "0")}
+                    {getNomeMes(dataModal.getMonth(), locale)} de {dataModal.getFullYear()} às {String(dataModal.getHours()).padStart(2, "0")}:{String(dataModal.getMinutes()).padStart(2, "0")} - {String(dataFimModal.getHours()).padStart(2, "0")}:{String(dataFimModal.getMinutes()).padStart(2, "0")}
                   </Text>
                   
-                  <Text style={styles.modalLabel}>Pet</Text>
+                  <Text style={styles.modalLabel}>{t("historico.modal.pet", "Pet")}</Text>
                   <Text style={styles.modalValor}>
-                    {atendimentoSelecionado.pet?.nome || "Não informado"}
+                    {atendimentoSelecionado.pet?.nome || t("historico.modal.notInformed", "Não informado")}
                   </Text>
                   
-                  <Text style={styles.modalLabel}>Serviços</Text>
+                  <Text style={styles.modalLabel}>{t("historico.modal.services", "Serviços")}</Text>
                   <Text style={styles.modalValor}>
                     {nomesServicosModal}
                   </Text>
                   
-                  <Text style={styles.modalLabel}>Valor Total</Text>
+                  <Text style={styles.modalLabel}>{t("historico.modal.totalValue", "Valor Total")}</Text>
                   <Text style={styles.modalValor}>
                     R$ {atendimentoSelecionado.valorTotal.toFixed(2).replace('.', ',')}
                   </Text>
@@ -285,7 +294,7 @@ export default function HistoricoScreen({ navigation, route }) {
                     style={styles.modalBotao}
                     onPress={() => setModalVisivel(false)}
                   >
-                    <Text style={styles.modalBotaoTexto}>Fechar</Text>
+                    <Text style={styles.modalBotaoTexto}>{t("historico.modal.close", "Fechar")}</Text>
                   </TouchableOpacity>
                 </>
               );

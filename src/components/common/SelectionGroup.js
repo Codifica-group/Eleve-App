@@ -1,11 +1,13 @@
 import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { COLORS, FONTS } from "../../constants/theme";
+import { useTranslation } from "react-i18next";
 
 export default function SelectionGroup({ label, opcoes, valor, onChange }) {
+  const { t } = useTranslation();
   return (
     <View style={styles.wrapper}>
-      <Text style={styles.label}>{label}</Text>
+      <Text style={styles.label}>{t(`data.labels.${label}`, label)}</Text>
       <View style={styles.opcoesBotoes}>
         {opcoes.map((op) => (
           <TouchableOpacity
@@ -20,7 +22,7 @@ export default function SelectionGroup({ label, opcoes, valor, onChange }) {
                 valor === op && styles.opcaoBotaoTextoAtivo,
               ]}
             >
-              {op}
+              {t(`data.options.${op}`, op)}
             </Text>
           </TouchableOpacity>
         ))}

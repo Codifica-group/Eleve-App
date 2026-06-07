@@ -13,8 +13,10 @@ import { cadastrarUsuario } from "../api/usuarios/cadastrarUsuario";
 import { logarUsuario } from "../api/usuarios/logarUsuario";
 import { cadastrarCliente } from "../api/clientes/cadastrarCliente";
 import { obterMensagemAmigavel } from "../api/compartilhado/errosApi";
+import { useTranslation } from "react-i18next";
 
 export default function RegisterScreen({ navigation }) {
+  const { t } = useTranslation();
   const ultimoCepBuscadoRef = useRef("");
 
   const [campos, setCampos] = useState({
@@ -77,12 +79,12 @@ export default function RegisterScreen({ navigation }) {
       setCarregandoCep(true);
       const resposta = await fetch(`https://viacep.com.br/ws/${cepLimpo}/json/`);
       if (!resposta.ok) {
-        throw new Error("Falha ao consultar CEP");
+        throw new Error(t("register.cepStatus.fetchFailed", "Falha ao consultar CEP"));
       }
 
       const dados = await resposta.json();
       if (dados.erro) {
-        throw new Error("CEP não encontrado");
+        throw new Error(t("register.cepStatus.notFound", "CEP não encontrado"));
       }
 
       setCampos((prev) => ({
@@ -98,7 +100,7 @@ export default function RegisterScreen({ navigation }) {
         bairro: "",
         cidade: "",
       }));
-      setErroCep("Não foi possível preencher o endereço pelo CEP. Verifique o CEP informado.");
+      setErroCep(t("register.cepStatus.error", "Não foi possível preencher o endereço pelo CEP. Verifique o CEP informado."));
     } finally {
       setCarregandoCep(false);
     }
@@ -147,7 +149,7 @@ export default function RegisterScreen({ navigation }) {
       });
 
       if (!token) {
-        throw new Error("Não foi possível autenticar. Tente novamente.");
+        throw new Error(t("register.errors.authFailed", "Não foi possível autenticar. Tente novamente."));
       }
 
       const rua = campos.endereco?.trim() || null;
@@ -202,8 +204,8 @@ export default function RegisterScreen({ navigation }) {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        <Text style={styles.titulo}>Crie sua conta</Text>
-        <Text style={styles.subtitulo}>Preencha seus dados para continuar</Text>
+        <Text style={styles.titulo}>{t("register.title", "Crie sua conta")}</Text>
+        <Text style={styles.subtitulo}>{t("register.subtitle", "Preencha seus dados para continuar")}</Text>
 
         {erroServidor ? (
           <View style={styles.erroServidorContainer}>
@@ -212,107 +214,107 @@ export default function RegisterScreen({ navigation }) {
         ) : null}
 
         <Input
-          label="Nome Completo"
+          label={t("register.labels.name", "Nome Completo")}
           value={campos.nome}
           onChangeText={(v) => atualizar("nome", v)}
           onBlur={() => tocarCampo("nome")}
-          placeholder="Ex: Maria Silva"
+          placeholder={t("register.labels.namePlaceholder", "Ex: Maria Silva")}
           erro={obterErroCampo("nome")}
           tocado={foiTocado("nome")}
           autoCapitalize="words"
         />
         <Input
-          label="Telefone"
+          label={t("register.labels.phone", "Telefone")}
           value={campos.telefone}
           onChangeText={(v) => atualizar("telefone", formatarTelefone(v))}
           onBlur={() => tocarCampo("telefone")}
-          placeholder="(11) 99876-5432"
+          placeholder={t("register.labels.phonePlaceholder", "(11) 99876-5432")}
           erro={obterErroCampo("telefone")}
           tocado={foiTocado("telefone")}
           keyboardType="phone-pad"
         />
         <Input
-          label="E-mail"
+          label={t("register.labels.email", "E-mail")}
           value={campos.email}
           onChangeText={(v) => atualizar("email", v)}
           onBlur={() => tocarCampo("email")}
-          placeholder="exemplo@email.com"
+          placeholder={t("register.labels.emailPlaceholder", "exemplo@email.com")}
           erro={obterErroCampo("email")}
           tocado={foiTocado("email")}
           keyboardType="email-address"
         />
         <Input
-          label="Senha"
+          label={t("register.labels.password", "Senha")}
           value={campos.senha}
           onChangeText={(v) => atualizar("senha", v)}
           onBlur={() => tocarCampo("senha")}
-          placeholder="Mínimo 8 caracteres (maiúscula, minúscula e número)"
+          placeholder={t("register.labels.passwordPlaceholder", "Mínimo 8 caracteres (maiúscula, minúscula e número)")}
           erro={obterErroCampo("senha")}
           tocado={foiTocado("senha")}
           secureTextEntry
         />
         <Input
-          label="CEP"
+          label={t("register.labels.cep", "CEP")}
           value={campos.cep}
           onChangeText={onChangeCep}
           onBlur={() => tocarCampo("cep")}
-          placeholder="00000-000"
+          placeholder={t("register.labels.cepPlaceholder", "00000-000")}
           erro={obterErroCampo("cep")}
           tocado={foiTocado("cep")}
           keyboardType="numeric"
         />
         {erroCep ? <Text style={styles.cepInfoErro}>{erroCep}</Text> : null}
-        {carregandoCep ? <Text style={styles.cepInfo}>Buscando endereço do CEP...</Text> : null}
+        {carregandoCep ? <Text style={styles.cepInfo}>{t("register.cepStatus.searching", "Buscando endereço do CEP...")}</Text> : null}
         <Input
-          label="Rua"
+          label={t("register.labels.street", "Rua")}
           value={campos.endereco}
           onChangeText={() => null}
           onBlur={() => tocarCampo("endereco")}
-          placeholder="Preenchido automaticamente"
+          placeholder={t("register.labels.autoFilled", "Preenchido automaticamente")}
           erro={obterErroCampo("endereco")}
           tocado={foiTocado("endereco")}
           editable={false}
         />
         <Input
-          label="Bairro"
+          label={t("register.labels.neighborhood", "Bairro")}
           value={campos.bairro}
           onChangeText={() => null}
           onBlur={() => tocarCampo("bairro")}
-          placeholder="Preenchido automaticamente"
+          placeholder={t("register.labels.autoFilled", "Preenchido automaticamente")}
           erro={obterErroCampo("bairro")}
           tocado={foiTocado("bairro")}
           editable={false}
         />
         <Input
-          label="Cidade"
+          label={t("register.labels.city", "Cidade")}
           value={campos.cidade}
           onChangeText={() => null}
           onBlur={() => tocarCampo("cidade")}
-          placeholder="Preenchido automaticamente"
+          placeholder={t("register.labels.autoFilled", "Preenchido automaticamente")}
           erro={obterErroCampo("cidade")}
           tocado={foiTocado("cidade")}
           editable={false}
         />
         <Input
-          label="Número (opcional)"
+          label={t("register.labels.number", "Número (opcional)")}
           value={campos.numEndereco}
           onChangeText={(v) => atualizar("numEndereco", v.replace(/\D/g, ""))}
           onBlur={() => tocarCampo("numEndereco")}
-          placeholder="Ex: 123"
+          placeholder={t("register.labels.numberPlaceholder", "Ex: 123")}
           erro={obterErroCampo("numEndereco")}
           tocado={foiTocado("numEndereco")}
           keyboardType="numeric"
         />
         <Input
-          label="Complemento"
+          label={t("register.labels.complement", "Complemento")}
           value={campos.complemento}
           onChangeText={(v) => atualizar("complemento", v)}
           onBlur={() => tocarCampo("complemento")}
-          placeholder="Ex: Apto 12, Bloco B"
+          placeholder={t("register.labels.complementPlaceholder", "Ex: Apto 12, Bloco B")}
         />
 
         <Button
-          title={carregando ? "Cadastrando..." : "Próximo"}
+          title={carregando ? t("register.buttons.registering", "Cadastrando...") : t("register.buttons.next", "Próximo")}
           onPress={prosseguir}
           style={styles.botao}
           carregando={carregando}
@@ -325,7 +327,7 @@ export default function RegisterScreen({ navigation }) {
           style={styles.linkContainer}
         >
           <Text style={styles.linkTexto}>
-            Já tem conta? <Text style={styles.linkTextoDestaque}>Entrar</Text>
+            {t("register.links.hasAccount", "Já tem conta? ")}<Text style={styles.linkTextoDestaque}>{t("register.links.enter", "Entrar")}</Text>
           </Text>
         </TouchableOpacity>
       </ScrollView>

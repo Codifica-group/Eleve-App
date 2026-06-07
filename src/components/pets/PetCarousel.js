@@ -2,12 +2,14 @@ import React, { useRef } from "react";
 import { View, Text, Image, StyleSheet, FlatList, Dimensions, TouchableOpacity } from "react-native";
 import { FontAwesome } from "@expo/vector-icons";
 import { COLORS, FONTS, RADIUS } from "../../constants/theme";
+import { useTranslation } from "react-i18next";
 
 const { width } = Dimensions.get("window");
 const ITEM_WIDTH = width * 0.85;
 const ITEM_MARGIN = 20;
 
 export default function PetCarousel({ pets, selectedPetId, onSelectPet }) {
+  const { t } = useTranslation();
   const onViewableItemsChanged = useRef(({ viewableItems }) => {
     if (viewableItems.length > 0) {
       onSelectPet(viewableItems[0].item.id);
@@ -27,7 +29,7 @@ export default function PetCarousel({ pets, selectedPetId, onSelectPet }) {
           <View style={styles.petHeader}>
             <View>
               <Text style={styles.petCardTitle}>{item.nome}</Text>
-              <Text style={styles.petInfoValue}>{item.raca?.nome || "Não informada"}</Text>
+              <Text style={styles.petInfoValue}>{item.raca?.nome || t("perfil.notInformedFeminine", "Não informada")}</Text>
             </View>
             {item.foto ? (
               <Image source={{ uri: item.foto }} style={styles.petPhoto} />

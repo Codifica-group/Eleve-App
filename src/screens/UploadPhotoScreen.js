@@ -6,8 +6,11 @@ import * as DocumentPicker from "expo-document-picker";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import SafeScreen from "../components/common/SafeScreen";
 import { COLORS, FONTS } from "../constants/theme";
+import { useTranslation } from "react-i18next";
 
 export default function UploadPhotoScreen({ navigation }) {
+  const { t } = useTranslation();
+
   const goBackWithImage = async (uri) => {
     await AsyncStorage.setItem("@eleve:foto_pet_pendente", uri);
     navigation.goBack();
@@ -16,7 +19,7 @@ export default function UploadPhotoScreen({ navigation }) {
   const tirarFoto = async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== "granted")
-      return Alert.alert("Erro", "Sem permissão para câmera.");
+      return Alert.alert(t("uploadPhoto.alerts.error", "Erro"), t("uploadPhoto.alerts.noCameraPermission", "Sem permissão para câmera."));
     const result = await ImagePicker.launchCameraAsync({
       allowsEditing: true,
       aspect: [1, 1],
@@ -41,17 +44,17 @@ export default function UploadPhotoScreen({ navigation }) {
 
   return (
     <SafeScreen backgroundColor={COLORS.accent} style={styles.container}>
-      <Text style={styles.title}>Como deseja enviar a foto?</Text>
+      <Text style={styles.title}>{t("uploadPhoto.title", "Como deseja enviar a foto?")}</Text>
 
       <View style={styles.optionsContainer}>
         <TouchableOpacity style={styles.option} onPress={tirarFoto}>
           <FontAwesome name="camera" size={35} color={COLORS.primaryMedium} />
-          <Text style={styles.optionText}>Câmera / Webcam</Text>
+          <Text style={styles.optionText}>{t("uploadPhoto.camera", "Câmera / Webcam")}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.option} onPress={escolherGaleria}>
           <FontAwesome name="image" size={35} color={COLORS.primaryMedium} />
-          <Text style={styles.optionText}>Galeria</Text>
+          <Text style={styles.optionText}>{t("uploadPhoto.gallery", "Galeria")}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.option} onPress={escolherArquivo}>
@@ -60,7 +63,7 @@ export default function UploadPhotoScreen({ navigation }) {
             size={35}
             color={COLORS.primaryMedium}
           />
-          <Text style={styles.optionText}>Arquivo</Text>
+          <Text style={styles.optionText}>{t("uploadPhoto.file", "Arquivo")}</Text>
         </TouchableOpacity>
       </View>
 
@@ -68,7 +71,7 @@ export default function UploadPhotoScreen({ navigation }) {
         style={styles.cancelBtn}
         onPress={() => navigation.goBack()}
       >
-        <Text style={styles.cancelText}>Cancelar</Text>
+        <Text style={styles.cancelText}>{t("uploadPhoto.cancel", "Cancelar")}</Text>
       </TouchableOpacity>
     </SafeScreen>
   );

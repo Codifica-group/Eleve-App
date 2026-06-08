@@ -32,7 +32,7 @@ export default function AIBar({ variant = "bar", promptOverride, insightExtras }
   const PROMPT_PADRAO =
     t("home.aiBar.defaultPrompt", "Você é um veterinário experiente e especialista em saúde, nutrição e comportamento de cachorros. Escute a dúvida do usuário e responda de forma clara, acolhedora e altamente profissional.");
 
-  const promptFinal = useMemo(() => {
+  var promptFinal = useMemo(() => {
     const valor = String(promptOverride || "").trim();
     return valor || PROMPT_PADRAO;
   }, [promptOverride]);
@@ -104,8 +104,8 @@ export default function AIBar({ variant = "bar", promptOverride, insightExtras }
 
     try {
       const formData = new FormData();
+      promptFinal = promptFinal + " Transcreva o audio e retorne a transcrição entre parênteses seguida da resposta da IA. Exemplo: (transcrição do audio) resposta da IA.";
       formData.append('prompt', promptFinal);
-
       await anexarArquivoAoFormData(formData, 'audio', uri, name || 'audio.m4a', type || 'audio/mp4');
 
       const respostaApi = await enviarRequisicaoHttp({
@@ -115,14 +115,20 @@ export default function AIBar({ variant = "bar", promptOverride, insightExtras }
       });
 
       const respostaTexto = respostaApi?.resposta || respostaApi;
-      setAiResponse(respostaTexto);
+      const match = respostaTexto.match(/^\((.*?)\)\s*([\s\S]*)$/);
+
+      const transcricao = match?.[1] ?? "";
+      const resposta = match?.[2] ?? "";
+
+      setAiResponse(resposta);
       await adicionarInsightAudio({
         audioUri: uri,
         origem: name === "audio_gravado.m4a" ? "gravacao" : "upload",
         prompt: promptFinal,
-        resposta: respostaTexto,
+        resposta: resposta,
         mimeType: type,
         fileName: name,
+        perguntaTranscrita: transcricao,
         ...(insightExtras || {}),
       });
 

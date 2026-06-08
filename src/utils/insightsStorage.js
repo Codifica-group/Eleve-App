@@ -32,6 +32,7 @@ export async function adicionarInsightAudio({
   resposta,
   mimeType,
   fileName,
+  transcriao,
   ...extras
 }) {
   const atual = await readArray(AUDIO_INSIGHTS_KEY);
@@ -44,6 +45,7 @@ export async function adicionarInsightAudio({
     resposta: resposta || "",
     mimeType: mimeType || null,
     fileName: fileName || null,
+    perguntaTranscrita: transcriao || null,
     ...extras,
   };
 

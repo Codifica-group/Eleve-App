@@ -10,7 +10,7 @@ import { COLORS, FONTS, SPACING, RADIUS } from "../constants/theme";
 import { obterOuSincronizarClienteId } from "../api/clientes/sincronizarCliente";
 import { buscarInfoRacaExterna } from "../api/racas/buscarInfoRacaExterna";
 import AIBar from "../components/home/AIBar";
-
+import { obterEnderecoBaseApi } from "../api/compartilhado/configuracaoApi";   
 
 const TOPICOS = [
   { key: "resumo", icon: "th-large" },
@@ -250,9 +250,10 @@ export default function DashboardScreen({ navigation }) {
   async function carregar() {
     const clienteId = await obterOuSincronizarClienteId();
     const tokenAcesso = await AsyncStorage.getItem("@eleve:token_acesso");
+    const baseUrl = obterEnderecoBaseApi();
 
     try {
-      const resposta = await fetch(`${BACKEND_URL}/api/dashboard/cliente/${clienteId}`, {
+      const resposta = await fetch(`${baseUrl}/dashboard/cliente/${clienteId}`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
@@ -265,8 +266,26 @@ export default function DashboardScreen({ navigation }) {
       }
 
       const dados = await resposta.json();
+      
+      // Buscar insights de áudio do localStorage
+      let insightsAudioLocal = [];
+      try {
+        const insightsAudioStored = await AsyncStorage.getItem("@eleve:insights_audio");
+        if (insightsAudioStored) {
+          insightsAudioLocal = JSON.parse(insightsAudioStored);
+        }
+      } catch (error) {
+        console.warn("Erro ao buscar insights de áudio do localStorage", error);
+      }
+      
+      // Mesclar insights de áudio do backend com os do localStorage
+      const insightsAudioMesclados = [
+        ...insightsAudioLocal,
+        ...(dados.insightsAudio || []),
+      ];
+      
       setInsightsRaca(dados.insightsRaca || []);
-      setInsightsAudio(dados.insightsAudio || []);
+      setInsightsAudio(insightsAudioMesclados);
       setPetsLista(dados.pets || []);
     } catch (error) {
       console.warn("Falha ao carregar dashboard do backend", error);
@@ -606,7 +625,7 @@ function InsightRacaCard({ insight, topicoKey, infoRacaCache }) {
           { key: "alimentacao", titulo: t("dashboard.blocks.feeding") },
         ].map((b) => ({
           ...b,
-          dicas: obterBulletsInsight({ insight, topicoKey: b.key, maxItems: 2 }, t),
+          dicas: obterBulletsInsight({ insight, topicoKey: b.key, maxItems: 3 }, t),
         }))
       : [
           {
